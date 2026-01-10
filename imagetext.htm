@@ -1,0 +1,919 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>創意圖文教室 - GRANDMONT AI</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        /* 防止畫布操作時的手機頁面滾動 */
+        canvas {
+            touch-action: none;
+        }
+        .fade-in {
+            animation: fadeIn 0.3s ease-in-out;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .tool-btn.active {
+            background-color: #e0e7ff; /* indigo-100 */
+            color: #4338ca; /* indigo-700 */
+            border-color: #4338ca;
+        }
+    </style>
+</head>
+<body class="bg-slate-50 font-sans text-slate-800 min-h-screen flex flex-col relative">
+
+    <!-- Header -->
+    <header class="bg-indigo-600 text-white shadow-md p-4 sticky top-0 z-30">
+        <div class="max-w-6xl mx-auto flex justify-between items-center">
+            <div class="flex flex-col md:flex-row md:items-center gap-2 cursor-pointer" onclick="location.reload()">
+                <h1 class="text-xl md:text-2xl font-bold flex items-center gap-2">
+                    <i class="fas fa-pen-nib"></i>
+                    創意圖文教室
+                </h1>
+                <!-- Changed @ to © -->
+                <span class="bg-indigo-800 text-indigo-100 text-xs px-2 py-1 rounded-full font-mono tracking-wider">&copy; GRANDMONT AI</span>
+            </div>
+            <nav>
+                <button id="nav-teacher-btn" class="bg-indigo-500 hover:bg-indigo-400 px-4 py-2 rounded-lg text-sm font-medium transition flex items-center gap-2 shadow-sm">
+                    <i class="fas fa-chalkboard-user"></i> <span>教師專區</span>
+                </button>
+            </nav>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="max-w-6xl mx-auto p-4 md:p-6 w-full flex-grow relative">
+        
+        <!-- View 0: Landing (Hidden by default now) -->
+        <section id="landing-view" class="hidden fade-in max-w-4xl mx-auto mt-10">
+             <!-- Simplified: This section is kept for structure but hidden as per request -->
+        </section>
+
+        <!-- View 1: Student Login (Default View) -->
+        <section id="student-login-view" class="fade-in max-w-md mx-auto mt-10 bg-white p-8 rounded-xl shadow-lg border border-slate-100">
+            <div class="text-center mb-6">
+                <h2 class="text-xl font-bold text-slate-800">學生登入</h2>
+                <p class="text-sm text-slate-500">請輸入老師提供的 6 位數代碼</p>
+            </div>
+            <form id="student-login-form" class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-slate-600 mb-1">課堂代碼 (Session Code)</label>
+                    <input type="text" id="session-code-input" class="w-full px-4 py-3 border border-slate-300 rounded-lg text-center text-2xl tracking-widest font-mono focus:ring-2 focus:ring-blue-500 outline-none uppercase" placeholder="000000" maxlength="6" required>
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <!-- Label changed to 學號 -->
+                        <label class="block text-sm font-medium text-slate-600 mb-1">學號</label>
+                        <select id="student-seat-select" class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" required>
+                            <option value="" disabled selected>請選擇學號</option>
+                            <!-- JS will populate 1-33 -->
+                        </select>
+                    </div>
+                    <div>
+                        <!-- Label changed to 名字, Removed required -->
+                        <label class="block text-sm font-medium text-slate-600 mb-1">名字 (選填)</label>
+                        <input type="text" id="student-name-input" class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" placeholder="輸入名字">
+                    </div>
+                </div>
+                <p id="student-login-error" class="text-red-500 text-sm hidden text-center"></p>
+                <button type="submit" class="w-full bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 transition font-medium shadow-md">
+                    開始作答
+                </button>
+            </form>
+        </section>
+
+        <!-- View 2: Student Workspace (Dynamic) -->
+        <section id="student-work-view" class="hidden fade-in max-w-3xl mx-auto">
+            <div class="bg-blue-50 p-4 rounded-xl border border-blue-100 mb-6 flex justify-between items-center sticky top-20 z-20 shadow-sm backdrop-blur bg-opacity-95">
+                <div>
+                    <h2 id="workspace-session-name" class="text-lg font-bold text-blue-900">載入中...</h2>
+                    <p class="text-sm text-blue-700">學生：<span id="workspace-student-info" class="font-medium">--</span></p>
+                </div>
+                <button id="submit-assignment-btn" class="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-lg shadow-md transition font-bold flex items-center gap-2">
+                    <i class="fas fa-paper-plane"></i> 提交作業
+                </button>
+            </div>
+
+            <div id="questions-container" class="space-y-8 pb-20">
+                <!-- Questions will be injected here -->
+            </div>
+        </section>
+
+        <!-- View 3: Teacher Login -->
+        <section id="teacher-login-view" class="hidden fade-in max-w-md mx-auto mt-10 bg-white p-8 rounded-xl shadow-lg border border-slate-100">
+            <div class="text-center mb-6">
+                <div class="w-12 h-12 bg-indigo-100 text-indigo-600 rounded-full flex items-center justify-center mx-auto mb-3">
+                    <i class="fas fa-lock text-xl"></i>
+                </div>
+                <h2 class="text-xl font-bold text-slate-800">教師專區登入</h2>
+            </div>
+            <form id="teacher-login-form" class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-slate-600 mb-1">請輸入通行碼</label>
+                    <input type="password" id="teacher-password-input" class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none transition" placeholder="密碼">
+                </div>
+                <p id="teacher-login-error" class="text-red-500 text-sm hidden text-center"></p>
+                <button type="submit" class="w-full bg-indigo-600 text-white py-2 rounded-lg hover:bg-indigo-700 transition font-medium shadow-md">
+                    進入查看
+                </button>
+                <button type="button" onclick="switchView('student-login')" class="w-full text-slate-400 text-sm hover:text-slate-600 mt-2">
+                    返回學生登入
+                </button>
+            </form>
+        </section>
+
+        <!-- View 4: Teacher Dashboard -->
+        <section id="teacher-dashboard-view" class="hidden fade-in">
+            <!-- Dashboard Tabs -->
+            <div class="flex space-x-4 mb-6 border-b border-slate-200">
+                <button onclick="switchTeacherTab('create')" id="tab-create" class="pb-2 px-4 border-b-2 border-indigo-600 text-indigo-600 font-bold transition">課程管理</button>
+                <button onclick="switchTeacherTab('view')" id="tab-view" class="pb-2 px-4 border-b-2 border-transparent text-slate-500 hover:text-indigo-600 transition">檢視作業</button>
+            </div>
+
+            <!-- Tab Content: Create / Manage Session -->
+            <div id="teacher-create-panel" class="max-w-4xl mx-auto space-y-6">
+                
+                <!-- Success Message Box (Hidden by default) -->
+                <div id="session-created-success" class="hidden bg-green-50 border border-green-200 rounded-xl p-6 shadow-sm flex flex-col md:flex-row items-center justify-between gap-4 animate-fade-in-down">
+                    <div class="flex items-center gap-4">
+                        <div class="w-12 h-12 bg-green-100 text-green-600 rounded-full flex items-center justify-center">
+                            <i class="fas fa-check text-xl"></i>
+                        </div>
+                        <div>
+                            <h3 class="font-bold text-green-800 text-lg">課程建立成功！</h3>
+                            <p class="text-green-600 text-sm">請將下方代碼提供給學生</p>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-3 bg-white px-4 py-2 rounded-lg border border-green-200 shadow-sm">
+                        <span id="success-code-display" class="text-3xl font-mono font-bold tracking-widest text-slate-800">--</span>
+                        <button onclick="copyToClipboard()" class="ml-2 text-slate-400 hover:text-indigo-600 transition" title="複製代碼">
+                            <i class="far fa-copy text-xl"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <!-- Create Form -->
+                    <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+                        <h3 class="text-lg font-bold text-slate-800 mb-4"><i class="fas fa-plus-circle text-indigo-600"></i> 新增課堂作業</h3>
+                        <div class="space-y-4">
+                            <div>
+                                <label class="block text-sm font-medium text-slate-700 mb-1">作業名稱 / 單元主題</label>
+                                <input type="text" id="new-session-name" class="w-full px-4 py-2 border border-slate-300 rounded-lg outline-none focus:border-indigo-500" placeholder="例如：我的自畫像">
+                            </div>
+                            
+                            <div id="question-inputs-container" class="space-y-3">
+                                <label class="block text-sm font-medium text-slate-700">題目設定 (最多 5 題)</label>
+                                <div class="flex gap-2">
+                                    <span class="bg-slate-100 px-3 py-2 rounded text-slate-500 font-mono">Q1</span>
+                                    <input type="text" class="question-input w-full px-4 py-2 border border-slate-300 rounded-lg outline-none focus:border-indigo-500" placeholder="輸入題目內容..." required>
+                                </div>
+                            </div>
+
+                            <div class="flex gap-2">
+                                <button onclick="addQuestionInput()" class="text-sm text-indigo-600 hover:text-indigo-800 font-medium px-2 py-1 hover:bg-indigo-50 rounded">
+                                    <i class="fas fa-plus"></i> 增加一題
+                                </button>
+                                <button onclick="removeQuestionInput()" class="text-sm text-red-500 hover:text-red-700 font-medium px-2 py-1 hover:bg-red-50 rounded">
+                                    <i class="fas fa-minus"></i> 減少一題
+                                </button>
+                            </div>
+
+                            <hr class="border-slate-100 my-4">
+
+                            <button onclick="createSession()" id="create-session-btn" class="w-full bg-indigo-600 text-white py-3 rounded-lg hover:bg-indigo-700 transition shadow-md font-bold">
+                                產生作業代碼
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Session List -->
+                    <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200 flex flex-col h-full">
+                        <h3 class="text-lg font-bold text-slate-800 mb-4 flex justify-between items-center">
+                            <span><i class="fas fa-list text-indigo-600"></i> 已建立的課程</span>
+                            <button onclick="fetchAndRenderSessionList()" class="text-xs bg-slate-100 hover:bg-slate-200 px-2 py-1 rounded text-slate-600 transition"><i class="fas fa-sync-alt"></i> 重新整理</button>
+                        </h3>
+                        <div class="flex-grow overflow-y-auto max-h-[400px] -mx-2 px-2 no-scrollbar">
+                            <table class="w-full text-left border-collapse">
+                                <thead>
+                                    <tr class="text-xs text-slate-400 border-b border-slate-100">
+                                        <th class="pb-2 pl-2">日期</th>
+                                        <th class="pb-2">名稱</th>
+                                        <th class="pb-2">代碼</th>
+                                        <th class="pb-2 text-right pr-2">操作</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="session-list-tbody" class="text-sm">
+                                    <tr><td colspan="4" class="text-center py-4 text-slate-400">載入中...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tab Content: View Submissions -->
+            <div id="teacher-view-panel" class="hidden">
+                <!-- Session Selector -->
+                <div class="mb-6 flex flex-col md:flex-row gap-4 items-center bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+                    <label class="font-medium text-slate-700 whitespace-nowrap">選擇作業 Session：</label>
+                    <select id="teacher-session-select" class="w-full md:w-auto flex-grow px-4 py-2 border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500">
+                        <option value="">-- 載入中 --</option>
+                    </select>
+                    <div id="session-code-display" class="bg-indigo-100 text-indigo-800 px-3 py-1 rounded font-mono font-bold hidden">
+                        CODE: <span></span>
+                    </div>
+                </div>
+
+                <!-- Question Filter Tabs -->
+                <div id="question-tabs" class="flex flex-wrap gap-2 mb-6 hidden">
+                    <!-- Buttons Q1, Q2 injected here -->
+                </div>
+
+                <!-- Grid -->
+                <div id="submissions-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <div class="col-span-full text-center py-20 text-slate-400">
+                        <i class="fas fa-arrow-up animate-bounce"></i> 請先選擇一個 Session
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Modal Overlay (Submission Details) -->
+    <div id="modal-overlay" class="fixed inset-0 bg-black bg-opacity-80 z-50 hidden flex items-center justify-center p-4 backdrop-blur-sm transition-opacity duration-300">
+        <div class="bg-white rounded-xl max-w-5xl w-full max-h-[90vh] overflow-hidden relative flex flex-col md:flex-row shadow-2xl">
+            <button id="modal-close" class="absolute top-4 right-4 bg-white/80 hover:bg-white text-slate-800 rounded-full p-2 z-10 transition shadow-sm backdrop-blur">
+                <i class="fas fa-times text-xl w-6 h-6 flex items-center justify-center"></i>
+            </button>
+            <div class="w-full md:w-2/3 bg-slate-100 flex items-center justify-center p-4 md:p-8 border-b md:border-b-0 md:border-r border-slate-200">
+                 <img id="modal-image" src="" class="max-w-full max-h-[40vh] md:max-h-[80vh] object-contain shadow-lg rounded-md bg-white">
+            </div>
+            <div class="w-full md:w-1/3 p-6 md:p-8 flex flex-col bg-white overflow-y-auto">
+                <div class="mb-6 border-b border-slate-100 pb-4">
+                    <h3 id="modal-name" class="text-2xl font-bold text-slate-900 mb-1"></h3>
+                    <p id="modal-info" class="text-slate-500 text-sm mb-2"></p>
+                    <div class="text-xs font-bold text-indigo-600 bg-indigo-50 inline-block px-2 py-1 rounded" id="modal-question-title"></div>
+                </div>
+                <div class="flex-grow">
+                    <h4 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">文字內容</h4>
+                    <p id="modal-text" class="text-slate-700 whitespace-pre-wrap leading-relaxed text-lg"></p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Session Modal (New) -->
+    <div id="edit-session-modal" class="fixed inset-0 bg-black bg-opacity-70 z-50 hidden flex items-center justify-center p-4 backdrop-blur-sm">
+        <div class="bg-white rounded-xl w-full max-w-lg shadow-2xl overflow-hidden animate-fade-in-up">
+            <div class="bg-indigo-600 px-6 py-4 flex justify-between items-center">
+                <h3 class="text-lg font-bold text-white"><i class="fas fa-edit"></i> 編輯課程內容</h3>
+                <button onclick="closeEditSessionModal()" class="text-white/80 hover:text-white transition">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="p-6 space-y-4 max-h-[80vh] overflow-y-auto">
+                <input type="hidden" id="edit-session-id">
+                <div>
+                    <label class="block text-sm font-medium text-slate-600 mb-1">課程名稱</label>
+                    <input type="text" id="edit-session-name" class="w-full px-4 py-2 border border-slate-300 rounded-lg outline-none focus:border-indigo-500">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-slate-600 mb-1">課程代碼 (不可修改)</label>
+                    <input type="text" id="edit-session-code" class="w-full px-4 py-2 bg-slate-100 border border-slate-300 rounded-lg text-slate-500 font-mono tracking-wider cursor-not-allowed" disabled>
+                </div>
+                
+                <div id="edit-question-container" class="space-y-3 pt-2 border-t border-slate-100">
+                    <label class="block text-sm font-medium text-slate-600">題目設定</label>
+                    <!-- Questions injected here -->
+                </div>
+
+                <div class="flex gap-2">
+                    <button onclick="addEditQuestionInput()" class="text-sm text-indigo-600 hover:text-indigo-800 font-medium px-2 py-1 hover:bg-indigo-50 rounded">
+                        <i class="fas fa-plus"></i> 增加一題
+                    </button>
+                    <button onclick="removeEditQuestionInput()" class="text-sm text-red-500 hover:text-red-700 font-medium px-2 py-1 hover:bg-red-50 rounded">
+                        <i class="fas fa-minus"></i> 減少一題
+                    </button>
+                </div>
+            </div>
+            <div class="bg-slate-50 px-6 py-4 flex justify-end gap-3 border-t border-slate-100">
+                <button onclick="closeEditSessionModal()" class="px-4 py-2 text-slate-600 hover:bg-slate-200 rounded-lg transition">取消</button>
+                <button onclick="saveEditSession()" class="px-4 py-2 bg-indigo-600 text-white hover:bg-indigo-700 rounded-lg shadow-sm transition">儲存修改</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script type="module">
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js';
+        import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js';
+        import { getFirestore, collection, addDoc, deleteDoc, updateDoc, doc, getDoc, getDocs, query, where, serverTimestamp, onSnapshot } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js';
+
+        // --- Configuration ---
+        const firebaseConfig = {
+          apiKey: "AIzaSyDDAfA2To3dq0hu4_kEN8Uf0pK3Y9VcsrY",
+          authDomain: "circle-9b2ca.firebaseapp.com",
+          projectId: "circle-9b2ca",
+          storageBucket: "circle-9b2ca.firebasestorage.app",
+          messagingSenderId: "306684592484",
+          appId: "1:306684592484:web:b85e802b89a2fff3ca3a71"
+        };
+        const appId = 'circle-class-001';
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        // Collections
+        const SESSIONS_COL = collection(db, 'artifacts', appId, 'public', 'data', 'sessions');
+        const SUBMISSIONS_COL = collection(db, 'artifacts', appId, 'public', 'data', 'submissions');
+
+        // --- Global State ---
+        let currentUser = null;
+        let currentSession = null; // For Student
+        let sessionList = []; // For Teacher
+        let submissionsData = []; // For Teacher
+        let currentFilterQIndex = 0; // For Teacher View (0 = Q1)
+        
+        // Canvas State Management (Map of canvasID -> {ctx, isDrawing, tool, color, size, snapshot})
+        const canvasStates = new Map();
+
+        // --- Helper: Populate Seat Select (Updated to just numbers) ---
+        const seatSelect = document.getElementById('student-seat-select');
+        for(let i=1; i<=33; i++) {
+            const opt = document.createElement('option');
+            opt.value = i;
+            opt.innerText = i; // Just the number
+            seatSelect.appendChild(opt);
+        }
+
+        // --- Auth & Init ---
+        async function initAuth() {
+            try {
+                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                    await signInWithCustomToken(auth, __initial_auth_token);
+                } else {
+                    await signInAnonymously(auth);
+                }
+            } catch (e) {
+                console.warn("Auth Error:", e);
+                try { await signInAnonymously(auth); } catch(err) {}
+            }
+        }
+        onAuthStateChanged(auth, (user) => {
+            currentUser = user;
+        });
+        initAuth();
+
+        // --- Navigation ---
+        window.switchView = function(viewId) {
+            // Hide all views
+            ['landing-view', 'student-login-view', 'student-work-view', 'teacher-login-view', 'teacher-dashboard-view'].forEach(id => {
+                document.getElementById(id).classList.add('hidden');
+            });
+            // Show target
+            document.getElementById(viewId + '-view').classList.remove('hidden');
+            
+            // Cleanup specific views
+            if(viewId === 'student-work') {
+                document.getElementById('nav-teacher-btn').classList.add('hidden');
+            } else {
+                // Ensure teacher button is visible on login screens
+                document.getElementById('nav-teacher-btn').classList.remove('hidden');
+            }
+        };
+
+        window.switchTeacherTab = function(tab) {
+            if(tab === 'create') {
+                document.getElementById('teacher-create-panel').classList.remove('hidden');
+                document.getElementById('teacher-view-panel').classList.add('hidden');
+                document.getElementById('tab-create').classList.add('border-indigo-600', 'text-indigo-600');
+                document.getElementById('tab-create').classList.remove('border-transparent', 'text-slate-500');
+                document.getElementById('tab-view').classList.remove('border-indigo-600', 'text-indigo-600');
+                document.getElementById('tab-view').classList.add('border-transparent', 'text-slate-500');
+                fetchAndRenderSessionList();
+            } else {
+                document.getElementById('teacher-create-panel').classList.add('hidden');
+                document.getElementById('teacher-view-panel').classList.remove('hidden');
+                document.getElementById('tab-view').classList.add('border-indigo-600', 'text-indigo-600');
+                document.getElementById('tab-view').classList.remove('border-transparent', 'text-slate-500');
+                document.getElementById('tab-create').classList.remove('border-indigo-600', 'text-indigo-600');
+                document.getElementById('tab-create').classList.add('border-transparent', 'text-slate-500');
+                loadTeacherSessionsForDropdown();
+            }
+        };
+
+        document.getElementById('nav-teacher-btn').addEventListener('click', () => {
+            switchView('teacher-login');
+        });
+
+        // ================= STUDENT LOGIC =================
+
+        // 1. Join Session
+        document.getElementById('student-login-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const code = document.getElementById('session-code-input').value.trim();
+            const seat = document.getElementById('student-seat-select').value;
+            // Name is optional, fallback to empty string
+            const name = document.getElementById('student-name-input').value.trim() || ''; 
+            const errorMsg = document.getElementById('student-login-error');
+
+            if(code.length !== 6) {
+                errorMsg.innerText = "代碼格式錯誤 (6位數)";
+                errorMsg.classList.remove('hidden');
+                return;
+            }
+            if(!seat) {
+                errorMsg.innerText = "請選擇學號";
+                errorMsg.classList.remove('hidden');
+                return;
+            }
+
+            errorMsg.innerText = "搜尋課程中...";
+            errorMsg.classList.remove('hidden');
+            errorMsg.className = "text-blue-500 text-sm text-center";
+
+            try {
+                const q = query(SESSIONS_COL, where("code", "==", code));
+                const querySnapshot = await getDocs(q);
+
+                if(querySnapshot.empty) {
+                    errorMsg.className = "text-red-500 text-sm text-center";
+                    errorMsg.innerText = "找不到此代碼的課程，請確認老師提供的代碼。";
+                    return;
+                }
+
+                const sessionDoc = querySnapshot.docs[0];
+                currentSession = { id: sessionDoc.id, ...sessionDoc.data() };
+                const studentInfo = { name, seat, code };
+                initStudentWorkspace(studentInfo);
+                switchView('student-work');
+
+            } catch(err) {
+                console.error(err);
+                errorMsg.className = "text-red-500 text-sm text-center";
+                errorMsg.innerText = "連線錯誤，請稍後再試。";
+            }
+        });
+
+        function initStudentWorkspace(studentInfo) {
+            document.getElementById('workspace-session-name').innerText = currentSession.name;
+            // Display logic: show name if present, else just seat number
+            const displayInfo = studentInfo.name ? `${studentInfo.seat}號 - ${studentInfo.name}` : `${studentInfo.seat}號 (未填名字)`;
+            document.getElementById('workspace-student-info').innerText = displayInfo;
+            
+            const container = document.getElementById('questions-container');
+            container.innerHTML = ''; 
+
+            currentSession.questions.forEach((qText, index) => {
+                const qId = `q-${index}`;
+                const canvasId = `canvas-${index}`;
+                const html = `
+                    <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden" id="${qId}">
+                        <div class="bg-slate-50 px-4 py-3 border-b border-slate-100 flex items-center gap-2">
+                            <span class="bg-blue-600 text-white text-xs font-bold px-2 py-1 rounded">Q${index+1}</span>
+                            <h3 class="font-medium text-slate-800">${escapeHtml(qText)}</h3>
+                        </div>
+                        <div class="p-4 space-y-4">
+                            <textarea id="text-${index}" rows="2" class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none resize-none bg-slate-50 focus:bg-white transition" placeholder="在此輸入文字回答..."></textarea>
+                            <div class="flex flex-wrap items-center gap-2 p-2 bg-slate-50 rounded-lg border border-slate-200">
+                                <div class="flex gap-1 border-r border-slate-300 pr-2">
+                                    <button type="button" class="tool-btn active w-8 h-8 rounded hover:bg-slate-200 flex items-center justify-center transition" onclick="setTool('${index}', 'pencil', this)" title="鉛筆"><i class="fas fa-pencil-alt"></i></button>
+                                    <button type="button" class="tool-btn w-8 h-8 rounded hover:bg-slate-200 flex items-center justify-center transition" onclick="setTool('${index}', 'line', this)" title="直線"><i class="fas fa-slash"></i></button>
+                                    <button type="button" class="tool-btn w-8 h-8 rounded hover:bg-slate-200 flex items-center justify-center transition" onclick="setTool('${index}', 'eraser', this)" title="橡皮擦"><i class="fas fa-eraser"></i></button>
+                                </div>
+                                <div class="flex items-center gap-2 border-r border-slate-300 pr-2">
+                                    <input type="color" onchange="setColor('${index}', this.value)" value="#000000" class="w-6 h-6 rounded cursor-pointer border-none p-0 bg-transparent">
+                                    <input type="range" min="1" max="10" value="3" onchange="setSize('${index}', this.value)" class="w-20 accent-blue-600">
+                                </div>
+                                <button type="button" onclick="clearCanvas('${index}')" class="text-xs text-red-500 hover:text-red-700 ml-auto font-medium"><i class="fas fa-trash"></i> 清除</button>
+                            </div>
+                            <div class="border-2 border-dashed border-slate-300 rounded-lg overflow-hidden touch-none bg-white relative h-64 w-full cursor-crosshair canvas-wrapper">
+                                <canvas id="${canvasId}" class="w-full h-full block"></canvas>
+                            </div>
+                        </div>
+                    </div>`;
+                container.insertAdjacentHTML('beforeend', html);
+                setTimeout(() => initCanvas(index, canvasId), 50);
+            });
+        }
+
+        function initCanvas(index, canvasId) {
+            const canvas = document.getElementById(canvasId);
+            const wrapper = canvas.parentElement;
+            canvas.width = wrapper.offsetWidth;
+            canvas.height = wrapper.offsetHeight;
+            const ctx = canvas.getContext('2d');
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+            ctx.lineWidth = 3;
+            ctx.strokeStyle = '#000000';
+            canvasStates.set(index.toString(), { canvas, ctx, isDrawing: false, tool: 'pencil', color: '#000000', size: 3, startX: 0, startY: 0, snapshot: null });
+            
+            const getPos = (e) => {
+                const rect = canvas.getBoundingClientRect();
+                let clientX = e.touches ? e.touches[0].clientX : e.clientX;
+                let clientY = e.touches ? e.touches[0].clientY : e.clientY;
+                return { x: clientX - rect.left, y: clientY - rect.top };
+            };
+            const start = (e) => {
+                if(e.cancelable) e.preventDefault();
+                const state = canvasStates.get(index.toString());
+                state.isDrawing = true;
+                const {x, y} = getPos(e);
+                state.startX = x; state.startY = y;
+                state.ctx.beginPath(); state.ctx.moveTo(x, y);
+                if (state.tool === 'line') state.snapshot = state.ctx.getImageData(0, 0, canvas.width, canvas.height);
+            };
+            const move = (e) => {
+                const state = canvasStates.get(index.toString());
+                if (!state.isDrawing) return;
+                if(e.cancelable) e.preventDefault();
+                const {x, y} = getPos(e);
+                const ctx = state.ctx;
+                if (state.tool === 'line') {
+                    ctx.putImageData(state.snapshot, 0, 0);
+                    ctx.beginPath(); ctx.moveTo(state.startX, state.startY); ctx.lineTo(x, y); ctx.stroke();
+                } else { ctx.lineTo(x, y); ctx.stroke(); }
+            };
+            const end = () => { canvasStates.get(index.toString()).isDrawing = false; };
+            canvas.addEventListener('mousedown', start); canvas.addEventListener('mousemove', move); canvas.addEventListener('mouseup', end); canvas.addEventListener('mouseleave', end);
+            canvas.addEventListener('touchstart', start, {passive: false}); canvas.addEventListener('touchmove', move, {passive: false}); canvas.addEventListener('touchend', end);
+        }
+
+        window.setTool = function(index, tool, btn) {
+            const state = canvasStates.get(index.toString());
+            state.tool = tool;
+            state.ctx.globalCompositeOperation = (tool === 'eraser') ? 'destination-out' : 'source-over';
+            const parent = btn.parentElement;
+            Array.from(parent.children).forEach(c => c.classList.remove('active'));
+            btn.classList.add('active');
+        };
+        window.setColor = function(index, color) { canvasStates.get(index.toString()).color = color; canvasStates.get(index.toString()).ctx.strokeStyle = color; };
+        window.setSize = function(index, size) { canvasStates.get(index.toString()).size = parseInt(size); canvasStates.get(index.toString()).ctx.lineWidth = parseInt(size); };
+        window.clearCanvas = function(index) {
+            if(!confirm("確定要清除這張圖嗎？")) return;
+            const state = canvasStates.get(index.toString());
+            state.ctx.clearRect(0, 0, state.canvas.width, state.canvas.height);
+        };
+        document.getElementById('submit-assignment-btn').addEventListener('click', async function() {
+            const btn = this;
+            const answers = [];
+            let isValid = true;
+            currentSession.questions.forEach((q, idx) => {
+                const textVal = document.getElementById(`text-${idx}`).value.trim();
+                const state = canvasStates.get(idx.toString());
+                const pixels = state.ctx.getImageData(0, 0, state.canvas.width, state.canvas.height).data;
+                let hasDrawing = false;
+                for(let i=3; i<pixels.length; i+=4) { if(pixels[i] > 0) { hasDrawing = true; break; } }
+                if(!textVal && !hasDrawing) { isValid = false; document.getElementById(`q-${idx}`).classList.add('border-red-500', 'ring-1', 'ring-red-500');
+                } else { document.getElementById(`q-${idx}`).classList.remove('border-red-500', 'ring-1', 'ring-red-500'); }
+                answers.push({ questionIndex: idx, questionTitle: q, text: textVal, drawing: state.canvas.toDataURL('image/png') });
+            });
+            if(!isValid) { alert("請注意：每一題都必須填寫文字 或 繪圖才能繳交！"); return; }
+            if(!confirm("確定要提交作業嗎？")) return;
+            btn.disabled = true; btn.innerText = "上傳中...";
+            try {
+                const seat = document.getElementById('student-seat-select').value;
+                const name = document.getElementById('student-name-input').value.trim() || ''; // Handle optional name
+                await addDoc(SUBMISSIONS_COL, {
+                    sessionCode: currentSession.code, sessionId: currentSession.id, studentName: name, studentNumber: seat, answers: answers, submittedAt: serverTimestamp()
+                });
+                alert("作業繳交成功！"); location.reload();
+            } catch(e) { console.error(e); alert("上傳失敗，請檢查網路"); btn.disabled = false; btn.innerText = "提交作業"; }
+        });
+
+        // ================= TEACHER LOGIC =================
+
+        // 1. Login
+        document.getElementById('teacher-login-form').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const pwd = document.getElementById('teacher-password-input').value;
+            if (pwd === 'grandmont') {
+                switchView('teacher-dashboard');
+                fetchAndRenderSessionList(); 
+            } else {
+                document.getElementById('teacher-login-error').innerText = "密碼錯誤";
+                document.getElementById('teacher-login-error').classList.remove('hidden');
+            }
+        });
+
+        // 2. Create Session
+        const questionContainer = document.getElementById('question-inputs-container');
+        window.addQuestionInput = function() {
+            const currentCount = questionContainer.querySelectorAll('.question-input').length;
+            if(currentCount >= 5) { alert("最多 5 題"); return; }
+            const div = document.createElement('div');
+            div.className = "flex gap-2";
+            div.innerHTML = `<span class="bg-slate-100 px-3 py-2 rounded text-slate-500 font-mono">Q${currentCount+1}</span><input type="text" class="question-input w-full px-4 py-2 border border-slate-300 rounded-lg outline-none focus:border-indigo-500" placeholder="輸入題目內容..." required>`;
+            questionContainer.appendChild(div);
+        };
+        window.removeQuestionInput = function() {
+            const inputs = questionContainer.querySelectorAll('.question-input');
+            if(inputs.length <= 1) return;
+            questionContainer.lastElementChild.remove();
+        };
+
+        window.createSession = async function() {
+            const name = document.getElementById('new-session-name').value.trim();
+            const inputs = document.querySelectorAll('.question-input');
+            const questions = Array.from(inputs).map(i => i.value.trim()).filter(v => v);
+
+            if(!name || questions.length === 0) {
+                alert("請填寫作業名稱和至少一題題目");
+                return;
+            }
+
+            const btn = document.getElementById('create-session-btn');
+            btn.disabled = true;
+            btn.innerText = "建立中...";
+
+            const code = Math.floor(100000 + Math.random() * 900000).toString();
+
+            try {
+                await addDoc(SESSIONS_COL, {
+                    name, questions, code, createdAt: serverTimestamp(), createdBy: currentUser ? currentUser.uid : 'anon'
+                });
+                document.getElementById('session-created-success').classList.remove('hidden');
+                document.getElementById('success-code-display').innerText = code;
+                document.getElementById('new-session-name').value = '';
+                questionContainer.innerHTML = `<label class="block text-sm font-medium text-slate-700">題目設定 (最多 5 題)</label><div class="flex gap-2"><span class="bg-slate-100 px-3 py-2 rounded text-slate-500 font-mono">Q1</span><input type="text" class="question-input w-full px-4 py-2 border border-slate-300 rounded-lg outline-none focus:border-indigo-500" placeholder="輸入題目內容..." required></div>`;
+                btn.disabled = false;
+                btn.innerText = "產生作業代碼";
+                fetchAndRenderSessionList();
+            } catch(e) {
+                console.error(e);
+                alert("建立失敗");
+                btn.disabled = false;
+                btn.innerText = "產生作業代碼";
+            }
+        };
+
+        window.copyToClipboard = function() {
+            const code = document.getElementById('success-code-display').innerText;
+            if(code === '--') return;
+            const textArea = document.createElement("textarea");
+            textArea.value = code;
+            document.body.appendChild(textArea);
+            textArea.select();
+            try {
+                document.execCommand('copy');
+                const originalText = document.querySelector('#session-created-success button i');
+                originalText.className = "fas fa-check text-green-500 text-xl";
+                setTimeout(() => originalText.className = "far fa-copy text-xl", 2000);
+            } catch (err) {
+                console.error('Copy failed', err);
+            }
+            document.body.removeChild(textArea);
+        };
+
+        // 3. Manage Sessions List
+        window.fetchAndRenderSessionList = async function() {
+            const tbody = document.getElementById('session-list-tbody');
+            try {
+                const q = query(SESSIONS_COL);
+                const snap = await getDocs(q);
+                let list = snap.docs.map(d => ({id: d.id, ...d.data()}));
+                list.sort((a,b) => (b.createdAt?.seconds||0) - (a.createdAt?.seconds||0));
+
+                if(list.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="4" class="text-center py-4 text-slate-400">目前沒有課程</td></tr>';
+                    return;
+                }
+
+                tbody.innerHTML = list.map(s => {
+                    const date = s.createdAt ? new Date(s.createdAt.seconds*1000).toLocaleDateString() : '-';
+                    return `
+                        <tr class="border-b border-slate-50 hover:bg-slate-50 transition">
+                            <td class="py-3 pl-2 text-slate-500">${date}</td>
+                            <td class="py-3 font-medium text-slate-700">${escapeHtml(s.name)}</td>
+                            <td class="py-3 font-mono text-indigo-600 font-bold">${s.code}</td>
+                            <td class="py-3 text-right pr-2 space-x-2">
+                                <button onclick="openEditSession('${s.id}')" class="text-blue-500 hover:text-blue-700 transition p-1" title="編輯內容">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                <button onclick="deleteSession('${s.id}')" class="text-red-400 hover:text-red-600 transition p-1" title="刪除課程">
+                                    <i class="fas fa-trash-alt"></i>
+                                </button>
+                            </td>
+                        </tr>
+                    `;
+                }).join('');
+
+            } catch(e) {
+                console.error(e);
+                tbody.innerHTML = '<tr><td colspan="4" class="text-center py-4 text-red-400">載入失敗</td></tr>';
+            }
+        };
+
+        // ================= EDIT SESSION LOGIC =================
+        const editModal = document.getElementById('edit-session-modal');
+        const editQContainer = document.getElementById('edit-question-container');
+        
+        window.openEditSession = async function(id) {
+            // Find data in local list first to be fast, but ideally fetch fresh
+            const q = query(SESSIONS_COL);
+            const snap = await getDocs(q);
+            const session = snap.docs.find(d => d.id === id)?.data();
+            
+            if (!session) { alert("找不到課程資料"); return; }
+            
+            document.getElementById('edit-session-id').value = id;
+            document.getElementById('edit-session-name').value = session.name;
+            document.getElementById('edit-session-code').value = session.code; // Read only
+            
+            // Populate Questions
+            editQContainer.innerHTML = '<label class="block text-sm font-medium text-slate-600">題目設定</label>';
+            session.questions.forEach((qText, idx) => {
+                const div = document.createElement('div');
+                div.className = "flex gap-2";
+                div.innerHTML = `<span class="bg-slate-100 px-3 py-2 rounded text-slate-500 font-mono">Q${idx+1}</span><input type="text" class="edit-question-input w-full px-4 py-2 border border-slate-300 rounded-lg outline-none focus:border-indigo-500" value="${escapeHtml(qText)}" placeholder="輸入題目內容..." required>`;
+                editQContainer.appendChild(div);
+            });
+            
+            editModal.classList.remove('hidden');
+        };
+
+        window.closeEditSessionModal = function() {
+            editModal.classList.add('hidden');
+        };
+
+        window.addEditQuestionInput = function() {
+            const currentCount = editQContainer.querySelectorAll('.edit-question-input').length;
+            if(currentCount >= 5) { alert("最多 5 題"); return; }
+            const div = document.createElement('div');
+            div.className = "flex gap-2";
+            div.innerHTML = `<span class="bg-slate-100 px-3 py-2 rounded text-slate-500 font-mono">Q${currentCount+1}</span><input type="text" class="edit-question-input w-full px-4 py-2 border border-slate-300 rounded-lg outline-none focus:border-indigo-500" placeholder="輸入題目內容..." required>`;
+            editQContainer.appendChild(div);
+        };
+
+        window.removeEditQuestionInput = function() {
+            const inputs = editQContainer.querySelectorAll('.edit-question-input');
+            if(inputs.length <= 1) return;
+            editQContainer.lastElementChild.remove();
+        };
+
+        window.saveEditSession = async function() {
+            const id = document.getElementById('edit-session-id').value;
+            const name = document.getElementById('edit-session-name').value.trim();
+            const inputs = document.querySelectorAll('.edit-question-input');
+            const questions = Array.from(inputs).map(i => i.value.trim()).filter(v => v);
+
+            if(!name || questions.length === 0) {
+                alert("請填寫作業名稱和至少一題題目");
+                return;
+            }
+            
+            if(!confirm("確定要儲存修改嗎？")) return;
+
+            try {
+                await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'sessions', id), {
+                    name: name,
+                    questions: questions
+                });
+                alert("修改成功！");
+                closeEditSessionModal();
+                fetchAndRenderSessionList();
+            } catch(e) {
+                console.error("Update failed", e);
+                alert("修改失敗");
+            }
+        };
+
+        // ================= DELETE SESSION LOGIC =================
+        window.deleteSession = async function(id) {
+            if(!confirm("確定要刪除這個課程嗎？\n注意：相關的學生作業雖然還保留在資料庫，但老師後台將無法直接查看。")) return;
+            
+            // PASSWORD PROTECTION ADDED HERE
+            const password = prompt("請輸入管理員密碼以確認刪除：");
+            if (password !== 'ai@plkgps') {
+                alert("密碼錯誤，拒絕刪除。");
+                return;
+            }
+
+            try {
+                await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'sessions', id));
+                fetchAndRenderSessionList();
+            } catch(e) {
+                console.error("Delete failed", e);
+                alert("刪除失敗");
+            }
+        };
+
+        // 4. View Sessions
+        async function loadTeacherSessionsForDropdown() {
+            const select = document.getElementById('teacher-session-select');
+            select.innerHTML = '<option>載入中...</option>';
+            try {
+                const q = query(SESSIONS_COL);
+                const snap = await getDocs(q);
+                sessionList = snap.docs.map(d => ({id: d.id, ...d.data()}));
+                sessionList.sort((a,b) => (b.createdAt?.seconds||0) - (a.createdAt?.seconds||0));
+
+                select.innerHTML = '<option value="">請選擇一個作業...</option>';
+                sessionList.forEach(s => {
+                    const date = s.createdAt ? new Date(s.createdAt.seconds*1000).toLocaleDateString() : '';
+                    select.innerHTML += `<option value="${s.id}">${date} - ${s.name} (${s.code})</option>`;
+                });
+            } catch(e) { console.error(e); select.innerHTML = '<option>載入失敗</option>'; }
+        }
+
+        document.getElementById('teacher-session-select').addEventListener('change', async function() {
+            const sessionId = this.value;
+            const session = sessionList.find(s => s.id === sessionId);
+            const grid = document.getElementById('submissions-grid');
+            const tabs = document.getElementById('question-tabs');
+            const codeDisplay = document.getElementById('session-code-display');
+
+            if(!sessionId) {
+                grid.innerHTML = '<div class="col-span-full text-center py-20 text-slate-400">請選擇一個 Session</div>';
+                tabs.classList.add('hidden');
+                codeDisplay.classList.add('hidden');
+                return;
+            }
+            codeDisplay.classList.remove('hidden');
+            codeDisplay.querySelector('span').innerText = session.code;
+
+            tabs.classList.remove('hidden');
+            tabs.innerHTML = '';
+            session.questions.forEach((q, idx) => {
+                const btn = document.createElement('button');
+                btn.className = `px-3 py-1 rounded text-sm font-medium transition ${idx === 0 ? 'bg-indigo-600 text-white' : 'bg-slate-200 text-slate-600 hover:bg-slate-300'}`;
+                btn.innerText = `Q${idx+1}: ${q.substring(0, 10)}...`;
+                btn.onclick = () => filterByQuestion(idx, session.questions.length);
+                tabs.appendChild(btn);
+            });
+            currentFilterQIndex = 0;
+
+            grid.innerHTML = '<div class="col-span-full text-center py-20"><i class="fas fa-spinner fa-spin"></i> 載入學生作業...</div>';
+            const q = query(SUBMISSIONS_COL, where("sessionId", "==", sessionId));
+            onSnapshot(q, (snap) => {
+                submissionsData = snap.docs.map(d => ({id: d.id, ...d.data()}));
+                submissionsData.sort((a,b) => parseInt(a.studentNumber) - parseInt(b.studentNumber));
+                renderSubmissionGrid();
+            });
+        });
+
+        window.filterByQuestion = function(index, totalQs) {
+            currentFilterQIndex = index;
+            const tabs = document.getElementById('question-tabs').children;
+            for(let i=0; i<tabs.length; i++) {
+                if(i === index) { tabs[i].className = 'px-3 py-1 rounded text-sm font-medium transition bg-indigo-600 text-white shadow-md';
+                } else { tabs[i].className = 'px-3 py-1 rounded text-sm font-medium transition bg-slate-200 text-slate-600 hover:bg-slate-300'; }
+            }
+            renderSubmissionGrid();
+        };
+
+        function renderSubmissionGrid() {
+            const grid = document.getElementById('submissions-grid');
+            if(submissionsData.length === 0) { grid.innerHTML = '<div class="col-span-full text-center py-20 text-slate-400 border-2 border-dashed border-slate-200 rounded-xl">尚無學生繳交</div>'; return; }
+            grid.innerHTML = submissionsData.map(sub => {
+                const answer = sub.answers.find(a => a.questionIndex === currentFilterQIndex) || {};
+                const safeName = escapeHtml(sub.studentName);
+                const safeText = escapeHtml(answer.text || '');
+                const img = answer.drawing || ''; 
+                return `
+                <div class="submission-card bg-white rounded-xl shadow-sm hover:shadow-lg transition duration-200 border border-slate-200 overflow-hidden flex flex-col cursor-pointer group" onclick="openSubmissionModal('${sub.id}', ${currentFilterQIndex})">
+                    <div class="bg-indigo-50 px-3 py-2 border-b border-indigo-100 flex justify-between items-center">
+                        <span class="font-bold text-indigo-900">${sub.studentNumber}號 ${safeName}</span>
+                        <span class="text-xs text-indigo-400"><i class="far fa-clock"></i></span>
+                    </div>
+                    <div class="h-48 bg-slate-50 relative border-b border-slate-100 p-2 flex items-center justify-center overflow-hidden">
+                        <img src="${img}" class="max-w-full max-h-full object-contain transition duration-500 group-hover:scale-105" alt="drawing">
+                    </div>
+                    <div class="p-3 bg-white flex-1">
+                        <p class="text-slate-600 text-sm italic line-clamp-3 break-words">${safeText || '<span class="text-slate-300">無文字說明</span>'}</p>
+                    </div>
+                </div>`;
+            }).join('');
+        }
+
+        window.openSubmissionModal = function(subId, qIdx) {
+            const sub = submissionsData.find(s => s.id === subId);
+            if(!sub) return;
+            const answer = sub.answers.find(a => a.questionIndex === qIdx);
+            const modal = document.getElementById('modal-overlay');
+            document.getElementById('modal-image').src = answer.drawing;
+            document.getElementById('modal-name').innerText = `${sub.studentNumber}號 ${sub.studentName}`;
+            document.getElementById('modal-info').innerText = `繳交時間：${sub.submittedAt ? new Date(sub.submittedAt.seconds*1000).toLocaleString() : ''}`;
+            document.getElementById('modal-question-title').innerText = `Q${qIdx+1}: ${answer.questionTitle}`;
+            document.getElementById('modal-text').innerText = answer.text || "（沒有文字說明）";
+            modal.classList.remove('hidden');
+            document.body.style.overflow = 'hidden';
+        };
+
+        document.getElementById('modal-close').onclick = () => { document.getElementById('modal-overlay').classList.add('hidden'); document.body.style.overflow = ''; };
+        function escapeHtml(text) { if (!text) return text; return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;"); }
+
+    </script>
+</body>
+</html>
