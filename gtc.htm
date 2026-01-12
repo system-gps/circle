@@ -1,0 +1,1586 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>創意圖文教室 - GRANDMONT IT</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- html2pdf.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <style>
+        /* 防止畫布操作時的手機頁面滾動 */
+        canvas {
+            touch-action: none;
+        }
+        .fade-in {
+            animation: fadeIn 0.3s ease-in-out;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .tool-btn.active {
+            background-color: #e0e7ff; /* indigo-100 */
+            color: #4338ca; /* indigo-700 */
+            border-color: #4338ca;
+        }
+        /* Hide scrollbar for gallery */
+        .hide-scroll::-webkit-scrollbar {
+            display: none;
+        }
+        .hide-scroll {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+        /* Dragging Styles */
+        .draggable-item {
+            transition: all 0.2s;
+        }
+        .draggable-item.dragging {
+            opacity: 0.5;
+            background-color: #f0fdf4; /* green-50 */
+            border: 2px dashed #4ade80;
+        }
+        /* Read Only Overlay */
+        .read-only-overlay {
+            pointer-events: none;
+            opacity: 0.7;
+            background-color: #f8fafc;
+        }
+        
+        /* Toast Notification */
+        #toast-container {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 100;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            pointer-events: none;
+        }
+        .toast {
+            background: rgba(30, 41, 59, 0.9);
+            color: white;
+            padding: 12px 24px;
+            border-radius: 50px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            font-size: 0.95rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            animation: slideDown 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+            opacity: 0;
+            backdrop-filter: blur(4px);
+        }
+        .toast.success { border-left: 4px solid #4ade80; }
+        .toast.error { border-left: 4px solid #ef4444; }
+        @keyframes slideDown {
+            from { transform: translateY(-20px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+        @keyframes fadeOut {
+            to { opacity: 0; transform: translateY(-10px); }
+        }
+
+        /* Decorative Background Pattern for Login */
+        .bg-pattern {
+            background-color: #f8fafc;
+            background-image: radial-gradient(#e2e8f0 1px, transparent 1px);
+            background-size: 20px 20px;
+        }
+
+        /* New Submission Animation */
+        @keyframes flashNew {
+            0% { transform: scale(1.02); box-shadow: 0 0 15px rgba(99, 102, 241, 0.5); border-color: #6366f1; background-color: #e0e7ff; }
+            70% { transform: scale(1.02); box-shadow: 0 0 15px rgba(99, 102, 241, 0.3); }
+            100% { transform: scale(1); box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05); border-color: #e2e8f0; background-color: white; }
+        }
+        .animate-new-sub {
+            animation: flashNew 2.5s ease-out forwards;
+        }
+    </style>
+</head>
+<body class="bg-slate-50 font-sans text-slate-800 min-h-screen flex flex-col relative bg-pattern">
+
+    <!-- Toast Container -->
+    <div id="toast-container"></div>
+
+    <!-- Header -->
+    <!-- Increased z-index to 40 to ensure it stays on top of sticky student bar -->
+    <header class="bg-indigo-600 text-white shadow-md p-4 sticky top-0 z-40">
+        <div class="max-w-6xl mx-auto flex justify-between items-center">
+            <div class="flex flex-col md:flex-row md:items-center gap-2 cursor-pointer" onclick="confirmReload()">
+                <h1 class="text-xl md:text-2xl font-bold flex items-center gap-2">
+                    <i class="fas fa-pen-nib"></i>
+                    創意圖文教室
+                </h1>
+                <span class="bg-indigo-800 text-indigo-100 text-xs px-2 py-1 rounded-full font-mono tracking-wider">&copy; GRANDMONT IT</span>
+            </div>
+            <nav>
+                <button id="nav-teacher-btn" class="bg-indigo-500 hover:bg-indigo-400 px-4 py-2 rounded-lg text-sm font-medium transition flex items-center gap-2 shadow-sm">
+                    <i class="fas fa-chalkboard-user"></i> <span>教師專區</span>
+                </button>
+            </nav>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="max-w-6xl mx-auto p-4 md:p-6 w-full flex-grow relative">
+        
+        <!-- View 0: Landing (Hidden) -->
+        <section id="landing-view" class="hidden fade-in max-w-4xl mx-auto mt-10"></section>
+
+        <!-- View 1: Student Login -->
+        <section id="student-login-view" class="fade-in max-w-md mx-auto mt-10">
+            <div class="bg-white p-8 rounded-2xl shadow-xl border border-indigo-50 relative overflow-hidden">
+                <!-- Decorative Circle -->
+                <div class="absolute -top-10 -right-10 w-32 h-32 bg-indigo-100 rounded-full opacity-50"></div>
+                <div class="absolute -bottom-10 -left-10 w-24 h-24 bg-blue-100 rounded-full opacity-50"></div>
+
+                <div class="text-center mb-8 relative z-10">
+                    <div class="w-20 h-20 bg-indigo-100 text-indigo-600 rounded-full flex items-center justify-center mx-auto mb-4 shadow-sm">
+                        <i class="fas fa-user-graduate text-3xl"></i>
+                    </div>
+                    <h2 class="text-2xl font-bold text-slate-800">學生登入</h2>
+                    <p class="text-slate-500 mt-1">準備好開始創作了嗎？</p>
+                </div>
+
+                <form id="student-login-form" class="space-y-5 relative z-10">
+                    <div>
+                        <label class="block text-sm font-bold text-slate-700 mb-2">
+                            <i class="fas fa-key text-indigo-400 mr-1"></i> 課堂代碼
+                        </label>
+                        <input type="text" id="session-code-input" class="w-full px-4 py-3 border-2 border-slate-200 rounded-xl text-center text-3xl tracking-[0.2em] font-mono font-bold text-indigo-600 focus:border-indigo-500 focus:ring-0 outline-none transition uppercase placeholder-slate-300" placeholder="000000" maxlength="6" required>
+                    </div>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-bold text-slate-700 mb-2">
+                                <i class="fas fa-list-ol text-indigo-400 mr-1"></i> 學號
+                            </label>
+                            <div class="relative">
+                                <select id="student-seat-select" class="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none appearance-none bg-white font-medium text-slate-700" required>
+                                    <option value="" disabled selected>請選擇</option>
+                                </select>
+                                <div class="absolute inset-y-0 right-0 flex items-center px-2 pointer-events-none text-slate-500">
+                                    <i class="fas fa-chevron-down text-xs"></i>
+                                </div>
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-bold text-slate-700 mb-2">
+                                <i class="fas fa-signature text-indigo-400 mr-1"></i> 名字
+                            </label>
+                            <input type="text" id="student-name-input" class="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none font-medium text-slate-700" placeholder="輸入名字">
+                        </div>
+                    </div>
+                    <p id="student-login-error" class="text-red-500 text-sm hidden text-center bg-red-50 py-2 rounded-lg"></p>
+                    <button type="submit" class="w-full bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 text-white py-3.5 rounded-xl transition font-bold shadow-lg hover:shadow-xl transform hover:-translate-y-0.5">
+                        開始作答 <i class="fas fa-arrow-right ml-2"></i>
+                    </button>
+                </form>
+            </div>
+        </section>
+
+        <!-- View 2: Student Workspace -->
+        <section id="student-work-view" class="hidden fade-in max-w-3xl mx-auto">
+            <!-- Adjusted sticky positioning to be right below header (approx 4.5rem) and increased margin-bottom for overlap prevention -->
+            <div class="bg-blue-50 p-4 rounded-xl border border-blue-100 mb-8 flex flex-wrap gap-4 justify-between items-center sticky top-[4.5rem] z-30 shadow-lg backdrop-blur-md bg-opacity-95">
+                <div>
+                    <h2 id="workspace-session-name" class="text-lg font-bold text-blue-900">載入中...</h2>
+                    <p class="text-sm text-blue-700 flex items-center gap-2">
+                        學生：<span id="workspace-student-info" class="font-medium">--</span>
+                        <!-- New Student Info Zoom Button -->
+                        <button onclick="openStudentInfoModal()" class="text-blue-500 hover:text-blue-700 bg-blue-50 hover:bg-blue-100 p-1.5 rounded-lg transition" title="放大顯示身份">
+                            <i class="fas fa-id-card"></i>
+                        </button>
+                    </p>
+                </div>
+                <div class="flex gap-2">
+                    <!-- NEW Re-login Button -->
+                    <button onclick="confirmReload()" class="bg-white hover:bg-slate-50 text-slate-500 hover:text-red-600 border border-slate-200 hover:border-red-200 px-3 py-2 rounded-lg shadow-sm transition font-bold flex items-center gap-2" title="退出並重新登入">
+                        <i class="fas fa-sign-out-alt"></i> <span class="hidden sm:inline">重新登入</span>
+                    </button>
+
+                    <!-- Gallery Button (Initially Disabled) -->
+                    <button id="student-gallery-btn" onclick="openStudentGallery()" disabled class="bg-orange-500 hover:bg-orange-600 disabled:bg-slate-300 disabled:cursor-not-allowed text-white px-4 py-2 rounded-lg shadow-md transition font-bold flex items-center gap-2" title="提交作業後才能觀摩">
+                        <i class="fas fa-images"></i> <span class="hidden sm:inline">觀摩同學作品</span>
+                    </button>
+                    <!-- Submit Button (Moved to Header, Initially Disabled) -->
+                    <button id="header-submit-btn" onclick="submitAssignment()" disabled class="bg-green-600 hover:bg-green-700 disabled:bg-slate-300 disabled:cursor-not-allowed text-white px-6 py-2 rounded-lg shadow-md transition font-bold flex items-center gap-2" title="請完成所有題目">
+                        <i class="fas fa-paper-plane"></i> <span class="hidden sm:inline">提交作業</span><span class="sm:hidden">提交</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Question Cards Container - Added padding top to ensure content isn't hidden under sticky bar initially -->
+            <div id="questions-container" class="space-y-8 pb-4 relative min-h-[500px] pt-6"></div>
+
+            <!-- Navigation Controls -->
+            <div id="student-nav-controls" class="bg-white border-t border-slate-200 p-4 fixed bottom-0 left-0 right-0 z-20 md:static md:bg-transparent md:border-0 md:p-0 md:mb-10">
+                <div class="max-w-3xl mx-auto flex justify-between items-center gap-4">
+                    <button id="prev-question-btn" onclick="navigateQuestion(-1)" class="flex-1 md:flex-none bg-slate-200 hover:bg-slate-300 text-slate-700 px-6 py-3 rounded-xl font-bold transition flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
+                        <i class="fas fa-arrow-left"></i> 上一題
+                    </button>
+                    
+                    <div class="font-mono font-bold text-lg text-slate-600 bg-white px-4 py-2 rounded-lg shadow-sm border border-slate-200">
+                        <span id="current-q-num">1</span> / <span id="total-q-num">--</span>
+                    </div>
+
+                    <button id="next-question-btn" onclick="navigateQuestion(1)" class="flex-1 md:flex-none bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-xl font-bold transition flex items-center justify-center gap-2">
+                        下一題 <i class="fas fa-arrow-right"></i>
+                    </button>
+                    
+                    <div class="flex-1 md:flex-none md:hidden"></div> 
+                </div>
+            </div>
+            <div class="h-20 md:hidden"></div>
+        </section>
+
+        <!-- View 3: Teacher Login -->
+        <section id="teacher-login-view" class="hidden fade-in max-w-md mx-auto mt-10 bg-white p-8 rounded-xl shadow-lg border border-slate-100">
+            <div class="text-center mb-6">
+                <div class="w-12 h-12 bg-indigo-100 text-indigo-600 rounded-full flex items-center justify-center mx-auto mb-3">
+                    <i class="fas fa-lock text-xl"></i>
+                </div>
+                <h2 class="text-xl font-bold text-slate-800">教師專區登入</h2>
+            </div>
+            <form id="teacher-login-form" class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-slate-600 mb-1">請輸入通行碼</label>
+                    <input type="password" id="teacher-password-input" class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none transition" placeholder="密碼">
+                </div>
+                <p id="teacher-login-error" class="text-red-500 text-sm hidden text-center"></p>
+                <button type="submit" class="w-full bg-indigo-600 text-white py-2 rounded-lg hover:bg-indigo-700 transition font-medium shadow-md">
+                    進入查看
+                </button>
+                <button type="button" onclick="switchView('student-login')" class="w-full text-slate-400 text-sm hover:text-slate-600 mt-2">
+                    返回學生登入
+                </button>
+            </form>
+        </section>
+
+        <!-- View 4: Teacher Dashboard -->
+        <section id="teacher-dashboard-view" class="hidden fade-in">
+            <!-- Dashboard Tabs -->
+            <div class="flex space-x-4 mb-6 border-b border-slate-200">
+                <button onclick="switchTeacherTab('create')" id="tab-create" class="pb-2 px-4 border-b-2 border-indigo-600 text-indigo-600 font-bold transition">課程管理</button>
+                <button onclick="switchTeacherTab('view')" id="tab-view" class="pb-2 px-4 border-b-2 border-transparent text-slate-500 hover:text-indigo-600 transition">檢視作業</button>
+            </div>
+
+            <!-- Tab Content: Create / Manage Session -->
+            <div id="teacher-create-panel" class="max-w-4xl mx-auto space-y-6">
+                <!-- Success Message Box (Replaced by Toast) -->
+                <div id="session-created-success" class="hidden bg-green-50 border border-green-200 rounded-xl p-6 shadow-sm flex flex-col md:flex-row items-center justify-between gap-4 animate-fade-in-down">
+                     <!-- Content kept hidden, used by logic to show code -->
+                    <div class="flex items-center gap-4">
+                        <div class="w-12 h-12 bg-green-100 text-green-600 rounded-full flex items-center justify-center">
+                            <i class="fas fa-check text-xl"></i>
+                        </div>
+                        <div>
+                            <h3 class="font-bold text-green-800 text-lg">課程建立成功！</h3>
+                            <p class="text-green-600 text-sm">請將下方代碼提供給學生</p>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-3 bg-white px-4 py-2 rounded-lg border border-green-200 shadow-sm">
+                        <span id="success-code-display" class="text-3xl font-mono font-bold tracking-widest text-slate-800">--</span>
+                        <button onclick="copyToClipboard()" class="ml-2 text-slate-400 hover:text-indigo-600 transition" title="複製代碼">
+                            <i class="far fa-copy text-xl"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <!-- Create Form -->
+                    <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+                        <h3 class="text-lg font-bold text-slate-800 mb-4"><i class="fas fa-plus-circle text-indigo-600"></i> 新增課堂作業</h3>
+                        <div class="space-y-4">
+                            <div>
+                                <label class="block text-sm font-medium text-slate-700 mb-1">作業名稱 / 單元主題</label>
+                                <input type="text" id="new-session-name" class="w-full px-4 py-2 border border-slate-300 rounded-lg outline-none focus:border-indigo-500" placeholder="例如：我的自畫像">
+                            </div>
+
+                            <div class="flex items-center gap-2 py-1">
+                                <input type="checkbox" id="new-session-peer-review" class="w-5 h-5 text-indigo-600 rounded focus:ring-indigo-500 border-gray-300">
+                                <label for="new-session-peer-review" class="text-sm font-medium text-slate-700">開放學生互相觀摩作品</label>
+                            </div>
+                            
+                            <div id="question-inputs-container" class="space-y-3">
+                                <label class="block text-sm font-medium text-slate-700">題目設定 (最多 5 題)</label>
+                                <div class="flex gap-2">
+                                    <span class="bg-slate-100 px-3 py-2 rounded text-slate-500 font-mono">Q1</span>
+                                    <input type="text" class="question-input w-full px-4 py-2 border border-slate-300 rounded-lg outline-none focus:border-indigo-500" placeholder="輸入題目內容..." required>
+                                </div>
+                            </div>
+
+                            <div class="flex gap-2">
+                                <button onclick="addQuestionInput()" class="text-sm text-indigo-600 hover:text-indigo-800 font-medium px-2 py-1 hover:bg-indigo-50 rounded"><i class="fas fa-plus"></i> 增加一題</button>
+                                <button onclick="removeQuestionInput()" class="text-sm text-red-500 hover:text-red-700 font-medium px-2 py-1 hover:bg-red-50 rounded"><i class="fas fa-minus"></i> 減少一題</button>
+                            </div>
+
+                            <hr class="border-slate-100 my-4">
+
+                            <button onclick="createSession()" id="create-session-btn" class="w-full bg-indigo-600 text-white py-3 rounded-lg hover:bg-indigo-700 transition shadow-md font-bold">產生作業代碼</button>
+                        </div>
+                    </div>
+
+                    <!-- Session List -->
+                    <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200 flex flex-col h-full">
+                        <h3 class="text-lg font-bold text-slate-800 mb-4 flex justify-between items-center">
+                            <span><i class="fas fa-list text-indigo-600"></i> 已建立的課程</span>
+                            <button onclick="fetchAndRenderSessionList()" class="text-xs bg-slate-100 hover:bg-slate-200 px-2 py-1 rounded text-slate-600 transition"><i class="fas fa-sync-alt"></i> 重新整理</button>
+                        </h3>
+                        <div class="flex-grow overflow-y-auto max-h-[400px] -mx-2 px-2 no-scrollbar">
+                            <table class="w-full text-left border-collapse">
+                                <thead>
+                                    <tr class="text-xs text-slate-400 border-b border-slate-100">
+                                        <th class="pb-2 pl-2">日期</th>
+                                        <th class="pb-2">名稱</th>
+                                        <th class="pb-2">代碼</th>
+                                        <th class="pb-2 text-right pr-2">操作</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="session-list-tbody" class="text-sm">
+                                    <tr><td colspan="4" class="text-center py-4 text-slate-400">載入中...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tab Content: View Submissions -->
+            <div id="teacher-view-panel" class="hidden">
+                <!-- Session Selector & Export -->
+                <div class="mb-6 flex flex-col md:flex-row gap-4 items-center bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+                    <label class="font-medium text-slate-700 whitespace-nowrap">選擇作業 Session：</label>
+                    <select id="teacher-session-select" class="w-full md:w-auto flex-grow px-4 py-2 border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500">
+                        <option value="">-- 載入中 --</option>
+                    </select>
+                    
+                    <div id="session-code-display" class="bg-indigo-100 text-indigo-800 px-3 py-1 rounded font-mono font-bold hidden">
+                        CODE: <span></span>
+                    </div>
+
+                    <div class="flex flex-wrap gap-2">
+                        <!-- Export PDF Button (By Student) -->
+                        <button id="export-pdf-student-btn" onclick="exportSessionPDF('student')" class="hidden bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg text-sm font-bold transition shadow-sm flex items-center gap-2 whitespace-nowrap">
+                            <i class="fas fa-user-graduate"></i> 匯出PDF(按學生)
+                        </button>
+                        <!-- Export PDF Button (By Question) -->
+                         <button id="export-pdf-question-btn" onclick="exportSessionPDF('question')" class="hidden bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-lg text-sm font-bold transition shadow-sm flex items-center gap-2 whitespace-nowrap">
+                            <i class="fas fa-list-ol"></i> 匯出PDF(按題目)
+                        </button>
+                        <!-- Student List Management Button -->
+                        <button id="view-student-list-btn" onclick="openStudentListModal()" class="hidden bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-bold transition shadow-sm flex items-center gap-2 whitespace-nowrap">
+                            <i class="fas fa-users"></i> 已提交清單
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Question Filter Tabs -->
+                <div id="question-tabs" class="flex flex-wrap gap-2 mb-6 hidden"></div>
+
+                <!-- Grid -->
+                <div id="submissions-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <div class="col-span-full text-center py-20 text-slate-400">
+                        <i class="fas fa-arrow-up animate-bounce"></i> 請先選擇一個 Session
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Teacher Code Zoom Modal (New) -->
+    <div id="teacher-code-modal" class="fixed inset-0 bg-slate-900 bg-opacity-95 z-[70] hidden flex items-center justify-center p-4 animate-fade-in-up">
+        <div class="text-center w-full max-w-4xl">
+            <h2 id="zoom-session-name" class="text-4xl md:text-5xl font-bold text-white mb-8"></h2>
+            <div class="bg-white text-slate-900 rounded-3xl p-8 md:p-16 mb-8 inline-block shadow-2xl">
+                <div id="zoom-session-code" class="text-8xl md:text-9xl font-mono font-bold tracking-widest select-all"></div>
+            </div>
+            <div class="flex justify-center gap-4">
+                <button onclick="copyTeacherCode()" class="bg-indigo-600 hover:bg-indigo-500 text-white px-8 py-4 rounded-xl text-xl font-bold transition flex items-center gap-2">
+                    <i class="far fa-copy"></i> 複製代碼
+                </button>
+                <button onclick="closeTeacherCodeModal()" class="bg-slate-700 hover:bg-slate-600 text-white px-8 py-4 rounded-xl text-xl font-bold transition">
+                    關閉
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Student Info Zoom Modal (New Card Design) -->
+    <div id="student-info-modal" class="fixed inset-0 bg-slate-900/95 backdrop-blur-sm z-[70] hidden flex items-center justify-center p-4 animate-fade-in-up cursor-pointer" onclick="closeStudentInfoModal()">
+        <div class="bg-white rounded-[3rem] p-10 md:p-16 w-full max-w-4xl shadow-2xl relative text-center border-8 border-indigo-100 flex flex-col items-center justify-center min-h-[60vh]" onclick="event.stopPropagation()">
+            
+            <!-- Session Name Badge -->
+            <div id="zoom-session-name-display" class="text-2xl md:text-3xl font-bold text-slate-500 mb-6 bg-slate-100 px-8 py-3 rounded-full inline-block shadow-inner"></div>
+            
+            <!-- Seat Number -->
+            <div id="zoom-student-seat" class="text-[10rem] md:text-[14rem] leading-none font-black text-indigo-600 font-mono mb-4"></div>
+            
+            <!-- Name -->
+            <div id="zoom-student-name" class="text-5xl md:text-7xl font-bold text-slate-800 mb-10"></div>
+            
+            <!-- Big Close Button -->
+            <button onclick="closeStudentInfoModal()" class="bg-slate-200 hover:bg-slate-300 text-slate-600 rounded-full w-24 h-24 flex items-center justify-center text-5xl transition shadow-lg mt-auto hover:rotate-90 duration-300">
+                <i class="fas fa-times"></i>
+            </button>
+            <p class="text-slate-400 mt-6 text-base font-medium">點擊任意處關閉</p>
+        </div>
+    </div>
+
+    <!-- Student List Modal (For Teacher) -->
+    <div id="student-list-modal" class="fixed inset-0 bg-black bg-opacity-70 z-50 hidden flex items-center justify-center p-4 backdrop-blur-sm">
+        <div class="bg-white rounded-xl w-full max-w-lg shadow-2xl overflow-hidden animate-fade-in-up flex flex-col max-h-[80vh]">
+            <div class="bg-blue-600 px-6 py-4 flex justify-between items-center flex-shrink-0">
+                <h3 class="text-lg font-bold text-white"><i class="fas fa-list-ul"></i> 已提交的學生清單</h3>
+                <button onclick="closeStudentListModal()" class="text-white/80 hover:text-white transition">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            
+            <div class="p-6 flex-grow overflow-y-auto">
+                <div id="student-list-container" class="space-y-2">
+                    <p class="text-slate-400 text-center py-4">載入中...</p>
+                </div>
+            </div>
+
+            <div class="bg-slate-50 px-6 py-4 flex justify-between items-center border-t border-slate-100 flex-shrink-0">
+                <span id="student-count-display" class="text-sm text-slate-500 font-medium">--</span>
+                <button onclick="resetAllSubmissions()" class="px-4 py-2 bg-red-100 text-red-600 hover:bg-red-200 hover:text-red-700 rounded-lg text-sm font-bold transition">
+                    <i class="fas fa-exclamation-triangle"></i> 重設所有學生
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Student Gallery Modal -->
+    <div id="student-gallery-modal" class="fixed inset-0 bg-slate-900 bg-opacity-95 z-50 hidden flex flex-col animate-fade-in-up">
+        <!-- Light Theme Header -->
+        <div class="bg-white text-slate-800 p-4 flex justify-between items-center shadow-md">
+            <h3 class="text-xl font-bold flex items-center gap-2">
+                <i class="fas fa-images text-orange-500"></i> 觀摩同學作品
+            </h3>
+            <button onclick="closeStudentGallery()" class="text-slate-400 hover:text-slate-600 transition bg-slate-100 hover:bg-slate-200 rounded-full w-8 h-8 flex items-center justify-center">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <!-- Light Theme Tabs -->
+        <div id="gallery-tabs" class="bg-white p-2 flex gap-2 overflow-x-auto hide-scroll border-t border-slate-100 shadow-sm z-10"></div>
+        <!-- Light Theme Background -->
+        <div class="flex-grow overflow-y-auto p-4 md:p-6 bg-slate-50">
+            <div id="gallery-grid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 max-w-7xl mx-auto">
+                <div class="col-span-full text-center text-slate-500 py-20">載入中...</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Overlay (Submission Details - Shared) -->
+    <!-- Increased Z-Index to 60 to appear above Gallery (z-50) -->
+    <div id="modal-overlay" class="fixed inset-0 bg-black bg-opacity-80 z-[60] hidden flex items-center justify-center p-4 backdrop-blur-sm transition-opacity duration-300">
+        <div class="bg-white rounded-xl max-w-6xl w-full max-h-[90vh] overflow-hidden relative flex flex-col md:flex-row shadow-2xl">
+            <!-- Close button stays absolute to container -->
+            <button id="modal-close" class="absolute top-4 right-4 bg-white/80 hover:bg-white text-slate-800 rounded-full p-2 z-10 transition shadow-sm backdrop-blur">
+                <i class="fas fa-times text-xl w-6 h-6 flex items-center justify-center"></i>
+            </button>
+            <div class="w-full md:w-3/5 bg-slate-100 flex items-center justify-center p-4 md:p-8 border-b md:border-b-0 md:border-r border-slate-200">
+                 <img id="modal-image" src="" class="max-w-full max-h-[40vh] md:max-h-[80vh] object-contain shadow-lg rounded-md bg-white">
+            </div>
+            
+            <!-- Right Side: Content + Interactions -->
+            <div class="w-full md:w-2/5 flex flex-col bg-white">
+                <!-- Info Header with padding-right to avoid Close Button overlap -->
+                <div class="p-6 md:p-8 border-b border-slate-100 flex-shrink-0 pr-16 relative">
+                    <div class="flex flex-col gap-1 items-start">
+                        <div class="text-xs font-bold text-indigo-600 bg-indigo-50 inline-block px-2 py-1 rounded mb-1" id="modal-question-title"></div>
+                        <h3 id="modal-name" class="text-2xl font-bold text-slate-900"></h3>
+                        <p id="modal-info" class="text-slate-500 text-sm"></p>
+                    </div>
+                </div>
+
+                <!-- Text Content & Interactions -->
+                <div class="flex-grow overflow-y-auto p-6 md:p-8 flex flex-col">
+                    <h4 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">文字內容</h4>
+                    <p id="modal-text" class="text-slate-700 whitespace-pre-wrap leading-relaxed text-lg mb-6"></p>
+
+                    <!-- Interaction Bar (Moved here) -->
+                     <div id="modal-like-container" class="hidden flex items-center gap-4 py-3 border-t border-b border-slate-100 mb-6">
+                        <button id="modal-like-btn" class="flex items-center gap-2 text-slate-500 hover:text-pink-500 transition group cursor-pointer bg-slate-50 hover:bg-pink-50 px-4 py-2 rounded-full border border-slate-200 hover:border-pink-200">
+                            <i class="far fa-heart text-xl group-hover:scale-110 transition-transform"></i>
+                            <span class="text-sm font-bold">給讚</span>
+                            <span id="modal-like-count" class="bg-white text-xs font-bold px-2 py-0.5 rounded-full border border-slate-200 ml-1">0</span>
+                        </button>
+                    </div>
+
+                    <!-- Comments Section (Student Only) -->
+                    <div id="modal-comments-section" class="hidden flex-grow flex flex-col">
+                        <h4 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4 flex items-center gap-2">
+                            <i class="fas fa-comments"></i> 留言板
+                        </h4>
+                        <div id="comments-list" class="space-y-3 mb-4 flex-grow overflow-y-auto max-h-[300px] pr-2">
+                            <!-- Comments injected here -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Comment Input (Footer) -->
+                <div id="modal-comment-input-area" class="hidden p-4 border-t border-slate-100 bg-slate-50">
+                    <form id="comment-form" class="flex gap-2">
+                        <input type="text" id="comment-input" class="flex-grow px-4 py-2 rounded-lg border border-slate-300 focus:outline-none focus:border-indigo-500 text-sm" placeholder="寫下鼓勵的話..." autocomplete="off">
+                        <button type="submit" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg font-medium text-sm transition">
+                            送出
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Session Modal -->
+    <div id="edit-session-modal" class="fixed inset-0 bg-black bg-opacity-70 z-50 hidden flex items-center justify-center p-4 backdrop-blur-sm">
+        <div class="bg-white rounded-xl w-full max-w-lg shadow-2xl overflow-hidden animate-fade-in-up">
+            <div class="bg-indigo-600 px-6 py-4 flex justify-between items-center">
+                <h3 class="text-lg font-bold text-white"><i class="fas fa-edit"></i> 編輯課程內容</h3>
+                <button onclick="closeEditSessionModal()" class="text-white/80 hover:text-white transition">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="p-6 space-y-4 max-h-[80vh] overflow-y-auto">
+                <input type="hidden" id="edit-session-id">
+                <div>
+                    <label class="block text-sm font-medium text-slate-600 mb-1">課程名稱</label>
+                    <input type="text" id="edit-session-name" class="w-full px-4 py-2 border border-slate-300 rounded-lg outline-none focus:border-indigo-500">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-slate-600 mb-1">課程代碼 (不可修改)</label>
+                    <input type="text" id="edit-session-code" class="w-full px-4 py-2 bg-slate-100 border border-slate-300 rounded-lg text-slate-500 font-mono tracking-wider cursor-not-allowed" disabled>
+                </div>
+
+                <div class="flex items-center gap-2 py-1 bg-indigo-50 p-2 rounded border border-indigo-100">
+                    <input type="checkbox" id="edit-session-peer-review" class="w-5 h-5 text-indigo-600 rounded focus:ring-indigo-500 border-gray-300">
+                    <label for="edit-session-peer-review" class="text-sm font-medium text-slate-700">開放學生互相觀摩作品</label>
+                </div>
+                
+                <div class="pt-2 border-t border-slate-100">
+                    <div class="flex justify-between items-center mb-2">
+                        <label class="block text-sm font-medium text-slate-600">題目設定 (可拖曳排序)</label>
+                        <button onclick="addEditQuestionInput()" class="text-sm text-indigo-600 hover:text-indigo-800 font-bold px-2 py-1 hover:bg-indigo-50 rounded flex items-center gap-1">
+                            <i class="fas fa-plus-circle"></i> 新增題目
+                        </button>
+                    </div>
+                    <div id="edit-question-container" class="space-y-2"></div>
+                </div>
+            </div>
+            <div class="bg-slate-50 px-6 py-4 flex justify-end gap-3 border-t border-slate-100">
+                <button onclick="closeEditSessionModal()" class="px-4 py-2 text-slate-600 hover:bg-slate-200 rounded-lg transition">取消</button>
+                <button onclick="saveEditSession()" class="px-4 py-2 bg-indigo-600 text-white hover:bg-indigo-700 rounded-lg shadow-sm transition">儲存修改</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script type="module">
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js';
+        import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js';
+        import { getFirestore, collection, addDoc, deleteDoc, updateDoc, doc, getDoc, getDocs, query, where, serverTimestamp, onSnapshot, writeBatch } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js';
+
+        // --- Configuration ---
+        const firebaseConfig = {
+          apiKey: "AIzaSyDDAfA2To3dq0hu4_kEN8Uf0pK3Y9VcsrY",
+          authDomain: "circle-9b2ca.firebaseapp.com",
+          projectId: "circle-9b2ca",
+          storageBucket: "circle-9b2ca.firebasestorage.app",
+          messagingSenderId: "306684592484",
+          appId: "1:306684592484:web:b85e802b89a2fff3ca3a71"
+        };
+        const appId = 'circle-class-001';
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        const SESSIONS_COL = collection(db, 'artifacts', appId, 'public', 'data', 'sessions');
+        const SUBMISSIONS_COL = collection(db, 'artifacts', appId, 'public', 'data', 'submissions');
+
+        // --- Global State ---
+        let currentUser = null;
+        let currentSession = null;
+        let currentStudentInfo = null; 
+        let sessionList = [];
+        let submissionsData = [];
+        let currentFilterQIndex = 0;
+        let studentGalleryQIndex = 0;
+        let currentStudentQuestionIndex = 0;
+        let isReadMode = false;
+        // Animation Flag
+        let isFirstSubmissionsLoad = true;
+        let previousSubmissionIds = new Set();
+        const canvasStates = new Map();
+        
+        let activeModalUnsubscribe = null; 
+        let activeModalSubmissionId = null;
+        let activeModalQIndex = null;
+
+        const seatSelect = document.getElementById('student-seat-select');
+        for(let i=1; i<=33; i++) {
+            const opt = document.createElement('option');
+            opt.value = i; opt.innerText = i; seatSelect.appendChild(opt);
+        }
+
+        async function initAuth() {
+            try {
+                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                    await signInWithCustomToken(auth, __initial_auth_token);
+                } else { await signInAnonymously(auth); }
+            } catch (e) { console.warn("Auth Error:", e); try { await signInAnonymously(auth); } catch(err) {} }
+        }
+        onAuthStateChanged(auth, (user) => { currentUser = user; });
+        initAuth();
+
+        window.showToast = function(message, type = 'success') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            toast.innerHTML = `
+                <i class="fas ${type === 'success' ? 'fa-check-circle text-green-400' : 'fa-exclamation-circle text-red-400'}"></i>
+                <span>${message}</span>
+            `;
+            container.appendChild(toast);
+
+            // Animate out
+            setTimeout(() => {
+                toast.style.animation = 'fadeOut 0.3s forwards';
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+
+        window.switchView = function(viewId) {
+            ['landing-view', 'student-login-view', 'student-work-view', 'teacher-login-view', 'teacher-dashboard-view'].forEach(id => {
+                document.getElementById(id).classList.add('hidden');
+            });
+            document.getElementById(viewId + '-view').classList.remove('hidden');
+            if(viewId === 'student-work') document.getElementById('nav-teacher-btn').classList.add('hidden');
+            else document.getElementById('nav-teacher-btn').classList.remove('hidden');
+        };
+
+        window.switchTeacherTab = function(tab, preselectId = null) {
+            if(tab === 'create') {
+                document.getElementById('teacher-create-panel').classList.remove('hidden');
+                document.getElementById('teacher-view-panel').classList.add('hidden');
+                document.getElementById('tab-create').classList.add('border-indigo-600', 'text-indigo-600');
+                document.getElementById('tab-create').classList.remove('border-transparent', 'text-slate-500');
+                document.getElementById('tab-view').classList.remove('border-indigo-600', 'text-indigo-600');
+                document.getElementById('tab-view').classList.add('border-transparent', 'text-slate-500');
+                fetchAndRenderSessionList();
+            } else {
+                document.getElementById('teacher-create-panel').classList.add('hidden');
+                document.getElementById('teacher-view-panel').classList.remove('hidden');
+                document.getElementById('tab-view').classList.add('border-indigo-600', 'text-indigo-600');
+                document.getElementById('tab-view').classList.remove('border-transparent', 'text-slate-500');
+                document.getElementById('tab-create').classList.remove('border-indigo-600', 'text-indigo-600');
+                document.getElementById('tab-create').classList.add('border-transparent', 'text-slate-500');
+                loadTeacherSessionsForDropdown(preselectId);
+            }
+        };
+        
+        window.goToSessionView = function(id) {
+            switchTeacherTab('view', id);
+        }
+
+        document.getElementById('nav-teacher-btn').addEventListener('click', () => { switchView('teacher-login'); });
+
+        // ================= STUDENT LOGIC =================
+        document.getElementById('student-login-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const code = document.getElementById('session-code-input').value.trim();
+            const seat = document.getElementById('student-seat-select').value;
+            const name = document.getElementById('student-name-input').value.trim() || ''; 
+            const errorMsg = document.getElementById('student-login-error');
+
+            if(code.length !== 6) { 
+                errorMsg.innerText = "代碼格式錯誤 (6位數)"; 
+                errorMsg.classList.remove('hidden'); return; 
+            }
+            if(!seat) { 
+                errorMsg.innerText = "請選擇學號"; 
+                errorMsg.classList.remove('hidden'); return; 
+            }
+
+            errorMsg.innerText = "搜尋課程中..."; 
+            errorMsg.classList.remove('hidden');
+            errorMsg.className = "text-blue-500 text-sm text-center bg-blue-50 py-2 rounded-lg";
+
+            try {
+                const q = query(SESSIONS_COL, where("code", "==", code));
+                const querySnapshot = await getDocs(q);
+                if(querySnapshot.empty) { 
+                    errorMsg.className = "text-red-500 text-sm text-center bg-red-50 py-2 rounded-lg"; 
+                    errorMsg.innerText = "找不到此代碼的課程，請確認老師提供的代碼。"; return; 
+                }
+
+                const sessionDoc = querySnapshot.docs[0];
+                currentSession = { id: sessionDoc.id, ...sessionDoc.data() };
+                
+                // IMPORTANT: Generate a consistent ID based on session and seat
+                const studentId = `${currentSession.code}_${seat}`;
+                
+                currentStudentInfo = { name, seat, code, id: studentId }; 
+                currentStudentQuestionIndex = 0;
+                
+                const subQ = query(SUBMISSIONS_COL, where("sessionId", "==", currentSession.id), where("studentNumber", "==", seat));
+                const subSnap = await getDocs(subQ);
+                const hasSubmitted = !subSnap.empty;
+
+                initStudentWorkspace(currentStudentInfo, hasSubmitted);
+                switchView('student-work');
+
+            } catch(err) { 
+                console.error(err); 
+                errorMsg.className = "text-red-500 text-sm text-center bg-red-50 py-2 rounded-lg"; 
+                errorMsg.innerText = "連線錯誤，請稍後再試。"; 
+            }
+        });
+
+        function initStudentWorkspace(studentInfo, hasSubmitted) {
+            document.getElementById('workspace-session-name').innerText = currentSession.name;
+            const displayInfo = studentInfo.name ? `${studentInfo.seat}號 - ${studentInfo.name}` : `${studentInfo.seat}號 (未填名字)`;
+            document.getElementById('workspace-student-info').innerText = displayInfo;
+            // Update the zoom card info immediately
+            document.getElementById('zoom-session-name-display').innerText = currentSession.name;
+            document.getElementById('zoom-student-seat').innerText = studentInfo.seat;
+            document.getElementById('zoom-student-name').innerText = studentInfo.name || '';
+            
+            const galleryBtn = document.getElementById('student-gallery-btn');
+            const submitBtn = document.getElementById('header-submit-btn');
+            const container = document.getElementById('questions-container');
+            container.innerHTML = ''; 
+            
+            galleryBtn.classList.add('hidden');
+            submitBtn.disabled = true;
+            submitBtn.classList.add('disabled:bg-slate-300', 'disabled:cursor-not-allowed');
+            submitBtn.innerHTML = '<i class="fas fa-paper-plane"></i> <span class="hidden sm:inline">提交作業</span><span class="sm:hidden">提交</span>';
+            isReadMode = false;
+
+            if (currentSession.allowPeerReview) {
+                galleryBtn.classList.remove('hidden');
+            }
+
+            if (hasSubmitted) {
+                isReadMode = true;
+                submitBtn.disabled = true;
+                submitBtn.innerHTML = '<i class="fas fa-check"></i> 已提交 (需重做請聯繫老師)';
+                submitBtn.classList.remove('bg-green-600', 'hover:bg-green-700');
+                submitBtn.classList.add('bg-slate-500', 'cursor-default');
+                galleryBtn.disabled = false;
+                galleryBtn.classList.remove('disabled:bg-slate-300', 'disabled:cursor-not-allowed');
+            } else {
+                submitBtn.classList.add('bg-green-600', 'hover:bg-green-700');
+                submitBtn.classList.remove('bg-slate-500', 'cursor-default');
+                galleryBtn.disabled = true;
+                galleryBtn.classList.add('disabled:bg-slate-300', 'disabled:cursor-not-allowed');
+            }
+            
+            currentSession.questions.forEach((qText, index) => {
+                const qId = `q-card-${index}`;
+                const canvasId = `canvas-${index}`;
+                const isHidden = index === 0 ? '' : 'hidden';
+                const textAreaDisabled = isReadMode ? 'disabled' : '';
+                const toolBarDisabledClass = isReadMode ? 'opacity-50 pointer-events-none' : '';
+                const canvasOverlayClass = isReadMode ? 'read-only-overlay absolute inset-0 z-10' : 'hidden';
+
+                const html = `
+                    <div class="question-card ${isHidden} bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden" id="${qId}" data-index="${index}">
+                        <div class="bg-slate-50 px-4 py-3 border-b border-slate-100 flex items-center gap-2">
+                            <span class="bg-blue-600 text-white text-xs font-bold px-2 py-1 rounded">Q${index+1}</span>
+                            <h3 class="font-bold text-2xl text-slate-900 leading-relaxed">${escapeHtml(qText)}</h3>
+                        </div>
+                        <div class="p-4 space-y-4">
+                            <textarea id="text-${index}" oninput="validateCompletion()" rows="2" class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none resize-none bg-slate-50 focus:bg-white transition disabled:bg-slate-100 disabled:text-slate-500" placeholder="在此輸入文字回答..." ${textAreaDisabled}></textarea>
+                            <div class="flex flex-wrap items-center gap-2 p-2 bg-slate-50 rounded-lg border border-slate-200 ${toolBarDisabledClass}">
+                                <div class="flex gap-1 border-r border-slate-300 pr-2">
+                                    <button type="button" class="tool-btn active w-8 h-8 rounded hover:bg-slate-200 flex items-center justify-center transition" onclick="setTool('${index}', 'pencil', this)" title="鉛筆"><i class="fas fa-pencil-alt"></i></button>
+                                    <button type="button" class="tool-btn w-8 h-8 rounded hover:bg-slate-200 flex items-center justify-center transition" onclick="setTool('${index}', 'line', this)" title="直線"><i class="fas fa-slash"></i></button>
+                                    <button type="button" class="tool-btn w-8 h-8 rounded hover:bg-slate-200 flex items-center justify-center transition" onclick="setTool('${index}', 'eraser', this)" title="橡皮擦"><i class="fas fa-eraser"></i></button>
+                                </div>
+                                <div class="flex items-center gap-2 border-r border-slate-300 pr-2">
+                                    <input type="color" onchange="setColor('${index}', this.value)" value="#000000" class="w-6 h-6 rounded cursor-pointer border-none p-0 bg-transparent">
+                                    <input type="range" min="1" max="10" value="3" onchange="setSize('${index}', this.value)" class="w-20 accent-blue-600">
+                                </div>
+                                <button type="button" onclick="clearCanvas('${index}')" class="text-xs text-red-500 hover:text-red-700 ml-auto font-medium"><i class="fas fa-trash"></i> 清除</button>
+                            </div>
+                            <div class="border-2 border-dashed border-slate-300 rounded-lg overflow-hidden touch-none bg-white relative h-64 w-full cursor-crosshair canvas-wrapper">
+                                <canvas id="${canvasId}" class="w-full h-full block"></canvas>
+                                <div class="${canvasOverlayClass}"></div> 
+                            </div>
+                        </div>
+                    </div>`;
+                container.insertAdjacentHTML('beforeend', html);
+            });
+            updateStudentNavigation();
+            setTimeout(() => initCanvas(0, `canvas-0`), 50);
+        }
+
+        window.validateCompletion = function() {
+            if (isReadMode) return; 
+            let allValid = true;
+            currentSession.questions.forEach((q, idx) => {
+                const textVal = document.getElementById(`text-${idx}`).value.trim();
+                let hasDrawing = false;
+                if (canvasStates.has(idx.toString())) {
+                    const state = canvasStates.get(idx.toString());
+                    if (!textVal) {
+                        const pixels = state.ctx.getImageData(0, 0, state.canvas.width, state.canvas.height).data;
+                        for(let i=3; i<pixels.length; i+=4) { if(pixels[i] > 0) { hasDrawing = true; break; } }
+                    } else { hasDrawing = true; }
+                } else if (textVal) { hasDrawing = true; }
+                if(!hasDrawing && !textVal) { allValid = false; }
+            });
+            const btn = document.getElementById('header-submit-btn');
+            if (allValid) { btn.disabled = false; btn.classList.remove('disabled:bg-slate-300', 'disabled:cursor-not-allowed'); } 
+            else { btn.disabled = true; btn.classList.add('disabled:bg-slate-300', 'disabled:cursor-not-allowed'); }
+        }
+
+        window.navigateQuestion = function(step) {
+            const total = currentSession.questions.length;
+            const newIndex = currentStudentQuestionIndex + step;
+            if (newIndex >= 0 && newIndex < total) {
+                document.getElementById(`q-card-${currentStudentQuestionIndex}`).classList.add('hidden');
+                currentStudentQuestionIndex = newIndex;
+                document.getElementById(`q-card-${currentStudentQuestionIndex}`).classList.remove('hidden');
+                if (!canvasStates.has(newIndex.toString())) { initCanvas(newIndex, `canvas-${newIndex}`); }
+                updateStudentNavigation();
+                document.getElementById('student-work-view').scrollIntoView({ behavior: 'smooth' });
+            }
+        }
+
+        function updateStudentNavigation() {
+            const total = currentSession.questions.length;
+            const current = currentStudentQuestionIndex + 1;
+            document.getElementById('current-q-num').innerText = current;
+            document.getElementById('total-q-num').innerText = total;
+            const prevBtn = document.getElementById('prev-question-btn');
+            const nextBtn = document.getElementById('next-question-btn');
+            if (currentStudentQuestionIndex === 0) { prevBtn.disabled = true; prevBtn.classList.add('opacity-50'); } else { prevBtn.disabled = false; prevBtn.classList.remove('opacity-50'); }
+            if (currentStudentQuestionIndex === total - 1) { nextBtn.classList.add('hidden'); } else { nextBtn.classList.remove('hidden'); }
+        }
+
+        function initCanvas(index, canvasId) {
+            const canvas = document.getElementById(canvasId);
+            const wrapper = canvas.parentElement;
+            if (wrapper.offsetWidth === 0) return;
+            canvas.width = wrapper.offsetWidth; canvas.height = wrapper.offsetHeight;
+            const ctx = canvas.getContext('2d');
+            ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.lineWidth = 3; ctx.strokeStyle = '#000000';
+            canvasStates.set(index.toString(), { canvas, ctx, isDrawing: false, tool: 'pencil', color: '#000000', size: 3, startX: 0, startY: 0, snapshot: null });
+            
+            const getPos = (e) => { const rect = canvas.getBoundingClientRect(); let clientX = e.touches ? e.touches[0].clientX : e.clientX; let clientY = e.touches ? e.touches[0].clientY : e.clientY; return { x: clientX - rect.left, y: clientY - rect.top }; };
+            const start = (e) => { if(isReadMode) return; if(e.cancelable) e.preventDefault(); const state = canvasStates.get(index.toString()); state.isDrawing = true; const {x, y} = getPos(e); state.startX = x; state.startY = y; state.ctx.beginPath(); state.ctx.moveTo(x, y); if (state.tool === 'line') state.snapshot = state.ctx.getImageData(0, 0, canvas.width, canvas.height); };
+            const move = (e) => { if(isReadMode) return; const state = canvasStates.get(index.toString()); if (!state.isDrawing) return; if(e.cancelable) e.preventDefault(); const {x, y} = getPos(e); const ctx = state.ctx; if (state.tool === 'line') { ctx.putImageData(state.snapshot, 0, 0); ctx.beginPath(); ctx.moveTo(state.startX, state.startY); ctx.lineTo(x, y); ctx.stroke(); } else { ctx.lineTo(x, y); ctx.stroke(); } };
+            const end = () => { if(isReadMode) return; canvasStates.get(index.toString()).isDrawing = false; validateCompletion(); };
+            canvas.addEventListener('mousedown', start); canvas.addEventListener('mousemove', move); canvas.addEventListener('mouseup', end); canvas.addEventListener('mouseleave', end);
+            canvas.addEventListener('touchstart', start, {passive: false}); canvas.addEventListener('touchmove', move, {passive: false}); canvas.addEventListener('touchend', end);
+        }
+
+        window.setTool = function(index, tool, btn) {
+            if(isReadMode) return;
+            const state = canvasStates.get(index.toString()); state.tool = tool; state.ctx.globalCompositeOperation = (tool === 'eraser') ? 'destination-out' : 'source-over';
+            const parent = btn.parentElement; Array.from(parent.children).forEach(c => c.classList.remove('active')); btn.classList.add('active');
+        };
+        window.setColor = function(index, color) { if(isReadMode) return; canvasStates.get(index.toString()).color = color; canvasStates.get(index.toString()).ctx.strokeStyle = color; };
+        window.setSize = function(index, size) { if(isReadMode) return; canvasStates.get(index.toString()).size = parseInt(size); canvasStates.get(index.toString()).ctx.lineWidth = parseInt(size); };
+        window.clearCanvas = function(index) { if(isReadMode) return; if(!confirm("確定要清除這張圖嗎？")) return; const state = canvasStates.get(index.toString()); state.ctx.clearRect(0, 0, state.canvas.width, state.canvas.height); validateCompletion(); };
+        
+        window.submitAssignment = async function() {
+            if(isReadMode) return;
+            const btn = document.getElementById('header-submit-btn'); if (btn.disabled) return;
+            const answers = []; let isValid = true;
+            currentSession.questions.forEach((q, idx) => {
+                const textVal = document.getElementById(`text-${idx}`).value.trim();
+                let hasDrawing = false;
+                if (canvasStates.has(idx.toString())) {
+                    const state = canvasStates.get(idx.toString());
+                    const pixels = state.ctx.getImageData(0, 0, state.canvas.width, state.canvas.height).data;
+                    for(let i=3; i<pixels.length; i+=4) { if(pixels[i] > 0) { hasDrawing = true; break; } }
+                }
+                if(!textVal && !hasDrawing) { isValid = false; }
+                let drawingData = '';
+                if (canvasStates.has(idx.toString())) { drawingData = canvasStates.get(idx.toString()).canvas.toDataURL('image/png'); }
+                else { const tempC = document.createElement('canvas'); tempC.width=100; tempC.height=100; drawingData = tempC.toDataURL('image/png'); }
+                answers.push({ questionIndex: idx, questionTitle: q, text: textVal, drawing: drawingData, likes: [], comments: [] });
+            });
+            if(!isValid) { alert("請注意：每一題都必須填寫文字 或 繪圖才能繳交！\n請檢查是否有題目漏寫。"); return; }
+            if(!confirm("確定要提交所有作業嗎？\n提交後將無法修改，但可以觀摩同學作品。")) return;
+            btn.disabled = true; btn.innerText = "上傳中...";
+            try {
+                const seat = document.getElementById('student-seat-select').value;
+                const name = document.getElementById('student-name-input').value.trim() || ''; 
+                await addDoc(SUBMISSIONS_COL, { sessionCode: currentSession.code, sessionId: currentSession.id, studentName: name, studentNumber: seat, answers: answers, submittedAt: serverTimestamp() });
+                showToast("作業繳交成功！現在您可以觀摩同學的作品了。");
+                isReadMode = true;
+                const galleryBtn = document.getElementById('student-gallery-btn');
+                btn.disabled = true;
+                btn.innerHTML = '<i class="fas fa-check"></i> 已提交 (需重做請聯繫老師)';
+                btn.classList.remove('bg-green-600', 'hover:bg-green-700');
+                btn.classList.add('bg-slate-500', 'cursor-default');
+                if (currentSession.allowPeerReview) { galleryBtn.disabled = false; galleryBtn.classList.remove('disabled:bg-slate-300', 'disabled:cursor-not-allowed'); }
+                const container = document.getElementById('questions-container');
+                container.querySelectorAll('textarea').forEach(el => el.disabled = true);
+                container.querySelectorAll('.canvas-wrapper').forEach(el => {
+                    const overlay = document.createElement('div');
+                    overlay.className = 'read-only-overlay absolute inset-0 z-10';
+                    el.appendChild(overlay);
+                });
+                container.querySelectorAll('.tool-btn, input[type=color], input[type=range], button').forEach(el => {
+                    el.disabled = true; el.classList.add('opacity-50', 'pointer-events-none');
+                });
+            } catch(e) { console.error(e); showToast("上傳失敗，請檢查網路", "error"); btn.disabled = false; btn.innerText = "提交作業"; }
+        };
+        
+        // --- Student Gallery Logic ---
+        window.openStudentGallery = async function() {
+            if (!currentSession) return;
+            document.getElementById('student-gallery-modal').classList.remove('hidden');
+            document.getElementById('gallery-grid').innerHTML = '<div class="col-span-full text-center text-slate-400 py-10"><i class="fas fa-spinner fa-spin"></i> 載入同學作品中...</div>';
+            const tabs = document.getElementById('gallery-tabs'); tabs.innerHTML = '';
+            currentSession.questions.forEach((q, idx) => {
+                const btn = document.createElement('button');
+                btn.className = `px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition ${idx === 0 ? 'bg-orange-500 text-white shadow' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`;
+                btn.innerText = `Q${idx+1}`; btn.onclick = (e) => filterStudentGallery(idx, e.target); tabs.appendChild(btn);
+            });
+            studentGalleryQIndex = 0;
+            const q = query(SUBMISSIONS_COL, where("sessionId", "==", currentSession.id));
+            onSnapshot(q, (snap) => {
+                const galleryData = snap.docs.map(d => ({id: d.id, ...d.data()}));
+                galleryData.sort((a,b) => parseInt(a.studentNumber) - parseInt(b.studentNumber));
+                window.studentGalleryData = galleryData;
+                renderStudentGallery();
+            });
+        }
+        window.filterStudentGallery = function(idx, btn) {
+            studentGalleryQIndex = idx;
+            Array.from(document.getElementById('gallery-tabs').children).forEach(t => t.className = 'px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition bg-slate-100 text-slate-600 hover:bg-slate-200');
+            btn.className = 'px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition bg-orange-500 text-white shadow';
+            renderStudentGallery();
+        }
+        window.renderStudentGallery = function() {
+            const grid = document.getElementById('gallery-grid'); const data = window.studentGalleryData;
+            if(!data || data.length === 0) { grid.innerHTML = '<div class="col-span-full text-center text-slate-500 py-10">目前還沒有同學繳交作業喔！</div>'; return; }
+            grid.innerHTML = data.map(sub => {
+                const answer = sub.answers ? sub.answers.find(a => a.questionIndex === studentGalleryQIndex) : null;
+                const safeName = escapeHtml(sub.studentName);
+                if (!answer) { return `<div class="bg-white rounded-xl overflow-hidden shadow-sm border border-slate-200 opacity-50 cursor-not-allowed"><div class="h-40 bg-slate-100 flex items-center justify-center p-2 text-slate-400">未回答此題</div><div class="p-3"><div class="flex justify-between items-center mb-1"><span class="font-bold text-slate-500 text-sm">${sub.studentNumber}號 ${safeName}</span></div></div></div>`; }
+                const safeText = escapeHtml(answer.text || ''); const img = answer.drawing || ''; 
+                const likes = answer.likes ? answer.likes.length : 0; const isLiked = currentStudentInfo && answer.likes && answer.likes.includes(currentStudentInfo.id);
+                return `<div class="bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-md border border-slate-200 hover:border-orange-400 transition cursor-pointer group" onclick="openStudentDetail('${sub.id}')"><div class="h-40 bg-slate-50 relative p-2 flex items-center justify-center overflow-hidden"><img src="${img}" class="max-w-full max-h-full object-contain" alt="drawing"></div><div class="p-3"><div class="flex justify-between items-center mb-1"><span class="font-bold text-slate-800 text-sm">${sub.studentNumber}號 ${safeName}</span><div class="flex items-center gap-1 text-xs text-slate-400"><i class="fas fa-heart ${isLiked ? 'text-pink-500' : ''}"></i> ${likes}</div></div><p class="text-slate-500 text-xs line-clamp-2">${safeText || '無文字'}</p></div></div>`;
+            }).join('');
+        }
+        window.openStudentDetail = function(id) {
+            activeModalSubmissionId = id; activeModalQIndex = studentGalleryQIndex;
+            const modal = document.getElementById('modal-overlay');
+            
+            // Show interaction elements for students
+            document.getElementById('modal-like-container').classList.remove('hidden');
+            document.getElementById('modal-comments-section').classList.remove('hidden');
+            document.getElementById('modal-comment-input-area').classList.remove('hidden');
+            
+            modal.classList.remove('hidden');
+            
+            if (activeModalUnsubscribe) activeModalUnsubscribe();
+            activeModalUnsubscribe = onSnapshot(doc(db, 'artifacts', appId, 'public', 'data', 'submissions', id), (docSnap) => {
+                if (docSnap.exists()) {
+                    const sub = {id: docSnap.id, ...docSnap.data()};
+                    const answer = sub.answers ? sub.answers.find(a => a.questionIndex === activeModalQIndex) : null;
+                    if (!answer) { return; }
+                    document.getElementById('modal-image').src = answer.drawing || '';
+                    document.getElementById('modal-name').innerText = `${sub.studentNumber}號 ${sub.studentName}`;
+                    document.getElementById('modal-info').innerText = `繳交時間：${sub.submittedAt ? new Date(sub.submittedAt.seconds*1000).toLocaleString() : ''}`;
+                    document.getElementById('modal-question-title').innerText = `Q${activeModalQIndex+1}: ${answer.questionTitle}`;
+                    document.getElementById('modal-text').innerText = answer.text || "（沒有文字說明）";
+                    
+                    const likes = answer.likes || [];
+                    const isLiked = currentStudentInfo && likes.includes(currentStudentInfo.id);
+                    const likeBtn = document.getElementById('modal-like-btn');
+                    document.getElementById('modal-like-count').innerText = likes.length;
+                    
+                    // Rebuild button content for safety
+                    if (isLiked) {
+                        likeBtn.className = 'flex items-center gap-2 text-pink-500 transition group cursor-pointer bg-pink-50 px-4 py-2 rounded-full border border-pink-200';
+                        likeBtn.innerHTML = `<i class="fas fa-heart text-xl scale-110 transition-transform"></i><span class="text-sm font-bold text-pink-500">已讚</span><span id="modal-like-count" class="bg-white text-xs font-bold px-2 py-0.5 rounded-full border border-pink-200 ml-1 text-slate-800">${likes.length}</span>`;
+                    } else {
+                        likeBtn.className = 'flex items-center gap-2 text-slate-500 hover:text-pink-500 transition group cursor-pointer bg-slate-50 hover:bg-pink-50 px-4 py-2 rounded-full border border-slate-200 hover:border-pink-200';
+                        likeBtn.innerHTML = `<i class="far fa-heart text-xl group-hover:scale-110 transition-transform"></i><span class="text-sm font-bold">給讚</span><span id="modal-like-count" class="bg-white text-xs font-bold px-2 py-0.5 rounded-full border border-slate-200 ml-1 text-slate-800">${likes.length}</span>`;
+                    }
+                    likeBtn.onclick = () => toggleLike(id, activeModalQIndex);
+                    
+                    const commentsList = document.getElementById('comments-list');
+                    const comments = answer.comments || [];
+                    if (comments.length === 0) { 
+                        commentsList.innerHTML = '<p class="text-slate-400 text-sm text-center italic py-4">還沒有人留言，來當第一個吧！</p>'; 
+                    } else { 
+                        commentsList.innerHTML = comments.map(c => `
+                            <div class="bg-slate-50 p-3 rounded-lg border border-slate-200">
+                                <div class="flex justify-between items-start mb-1">
+                                    <span class="font-bold text-indigo-600 text-xs">${c.authorSeat}號 ${escapeHtml(c.authorName)}</span>
+                                    <span class="text-xs text-slate-400">${new Date(c.createdAt).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</span>
+                                </div>
+                                <p class="text-slate-700 text-sm whitespace-pre-wrap">${escapeHtml(c.text)}</p>
+                            </div>
+                        `).join(''); 
+                        // Auto scroll
+                        setTimeout(() => commentsList.scrollTop = commentsList.scrollHeight, 10);
+                    }
+                }
+            });
+        }
+        window.closeStudentGallery = function() { document.getElementById('student-gallery-modal').classList.add('hidden'); }
+        
+        window.toggleLike = async function(docId, qIdx) {
+            if (!currentStudentInfo) { alert("請先重新登入"); return; }
+            const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'submissions', docId);
+            const docSnap = await getDoc(docRef);
+            if (docSnap.exists()) {
+                const data = docSnap.data(); 
+                const answers = [...data.answers]; 
+                const targetAnswerIndex = answers.findIndex(a => a.questionIndex === qIdx);
+                if (targetAnswerIndex === -1) return;
+                
+                const targetAnswer = answers[targetAnswerIndex];
+                if (!targetAnswer.likes) targetAnswer.likes = [];
+                
+                const uid = currentStudentInfo.id;
+                
+                // Toggle Logic
+                if (targetAnswer.likes.includes(uid)) { 
+                    targetAnswer.likes = targetAnswer.likes.filter(id => id !== uid); // Remove
+                } else { 
+                    targetAnswer.likes.push(uid); // Add
+                }
+                
+                // Update specific field in array? No, update whole array
+                await updateDoc(docRef, { answers: answers });
+            }
+        }
+        
+        document.getElementById('comment-form').addEventListener('submit', async (e) => {
+            e.preventDefault(); 
+            const input = document.getElementById('comment-input'); 
+            const text = input.value.trim(); 
+            if (!text) return;
+            if (!currentStudentInfo) { alert("請先重新登入"); return; }
+            
+            const docId = activeModalSubmissionId; 
+            const qIdx = activeModalQIndex; 
+            const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'submissions', docId);
+            
+            input.value = ''; // Clear immediately
+            
+            const docSnap = await getDoc(docRef);
+            if (docSnap.exists()) {
+                const data = docSnap.data(); 
+                const answers = [...data.answers];
+                const targetAnswerIndex = answers.findIndex(a => a.questionIndex === qIdx);
+                if (targetAnswerIndex === -1) return;
+                
+                const targetAnswer = answers[targetAnswerIndex];
+                if (!targetAnswer.comments) targetAnswer.comments = [];
+                
+                targetAnswer.comments.push({ 
+                    authorSeat: currentStudentInfo.seat, 
+                    authorName: currentStudentInfo.name || '同學', 
+                    text: text, 
+                    createdAt: Date.now() 
+                });
+                
+                await updateDoc(docRef, { answers: answers });
+            }
+        });
+
+        // ================= TEACHER LOGIC =================
+        // ... (Remaining logic identical to before to maintain integrity) ...
+        document.getElementById('teacher-login-form').addEventListener('submit', (e) => { 
+            e.preventDefault(); 
+            const pwd = document.getElementById('teacher-password-input').value; 
+            if (pwd === 'grandmont') { 
+                switchView('teacher-dashboard'); 
+                fetchAndRenderSessionList(); 
+            } else { 
+                document.getElementById('teacher-login-error').classList.remove('hidden'); 
+            } 
+        });
+
+        const questionContainer = document.getElementById('question-inputs-container');
+        window.addQuestionInput = function() { const c = questionContainer.querySelectorAll('.question-input').length; if(c>=5) {alert("最多 5 題");return;} const d=document.createElement('div'); d.className="flex gap-2"; d.innerHTML=`<span class="bg-slate-100 px-3 py-2 rounded text-slate-500 font-mono">Q${c+1}</span><input type="text" class="question-input w-full px-4 py-2 border border-slate-300 rounded-lg outline-none focus:border-indigo-500" placeholder="輸入題目內容..." required>`; questionContainer.appendChild(d); };
+        window.removeQuestionInput = function() { const i=questionContainer.querySelectorAll('.question-input'); if(i.length<=1)return; questionContainer.lastElementChild.remove(); };
+        window.createSession = async function() {
+            const name=document.getElementById('new-session-name').value.trim(); const allow=document.getElementById('new-session-peer-review').checked; const qs=Array.from(document.querySelectorAll('.question-input')).map(i=>i.value.trim()).filter(v=>v);
+            if(!name||qs.length===0){alert("請填寫完整");return;}
+            const btn=document.getElementById('create-session-btn'); btn.disabled=true; btn.innerText="建立中...";
+            const code=Math.floor(100000+Math.random()*900000).toString();
+            try { await addDoc(SESSIONS_COL,{name,questions:qs,code,allowPeerReview:allow,createdAt:serverTimestamp(),createdBy:currentUser?currentUser.uid:'anon'}); 
+                showToast("課程建立成功！"); 
+                document.getElementById('new-session-name').value=''; 
+                document.getElementById('new-session-peer-review').checked=false; 
+                questionContainer.innerHTML=`<label class="block text-sm font-medium text-slate-700">題目設定 (最多 5 題)</label><div class="flex gap-2"><span class="bg-slate-100 px-3 py-2 rounded text-slate-500 font-mono">Q1</span><input type="text" class="question-input w-full px-4 py-2 border border-slate-300 rounded-lg outline-none focus:border-indigo-500" placeholder="輸入題目內容..." required></div>`; 
+                btn.disabled=false; btn.innerText="產生作業代碼"; fetchAndRenderSessionList(); 
+            } catch(e){console.error(e);showToast("建立失敗", "error");btn.disabled=false;}
+        };
+        window.copyToClipboard = function() { const c=document.getElementById('success-code-display').innerText; if(c==='--')return; const t=document.createElement("textarea"); t.value=c; document.body.appendChild(t); t.select(); try{document.execCommand('copy');}catch(e){} document.body.removeChild(t); };
+        window.fetchAndRenderSessionList = async function() {
+            const tb=document.getElementById('session-list-tbody'); const q=query(SESSIONS_COL); const s=await getDocs(q); let l=s.docs.map(d=>({id:d.id,...d.data()})); l.sort((a,b)=>(b.createdAt?.seconds||0)-(a.createdAt?.seconds||0));
+            if(l.length===0){tb.innerHTML='<tr><td colspan="4" class="text-center py-4 text-slate-400">無課程</td></tr>';return;}
+            tb.innerHTML=l.map(s=>`<tr class="border-b border-slate-50 hover:bg-slate-50"><td class="py-3 pl-2 text-slate-500">${s.createdAt?new Date(s.createdAt.seconds*1000).toLocaleDateString():'-'}</td><td class="py-3 font-medium text-slate-700 text-indigo-600 hover:text-indigo-800 hover:underline cursor-pointer" onclick="goToSessionView('${s.id}')">${escapeHtml(s.name)}</td><td class="py-3 font-mono text-indigo-600 font-bold cursor-pointer hover:bg-indigo-50 hover:scale-110 transition origin-left" onclick="openTeacherCodeModal('${escapeHtml(s.name)}', '${s.code}')" title="點擊放大">${s.code} <i class="fas fa-search-plus text-xs ml-1 opacity-50"></i></td><td class="py-3 text-right pr-2 space-x-2"><button onclick="openEditSession('${s.id}')" class="text-blue-500 p-1"><i class="fas fa-edit"></i></button><button onclick="deleteSession('${s.id}')" class="text-red-400 p-1"><i class="fas fa-trash-alt"></i></button></td></tr>`).join('');
+        };
+        window.openSubmissionModal = function(subId, qIdx) {
+            if (activeModalUnsubscribe) { activeModalUnsubscribe(); activeModalUnsubscribe = null; }
+            const sub = submissionsData.find(s => s.id === subId);
+            if(!sub) return;
+            const answer = sub.answers.find(a => a.questionIndex === qIdx);
+            const modal = document.getElementById('modal-overlay');
+            document.getElementById('modal-image').src = answer.drawing;
+            document.getElementById('modal-name').innerText = `${sub.studentNumber}號 ${sub.studentName}`;
+            document.getElementById('modal-info').innerText = `繳交時間：${sub.submittedAt ? new Date(sub.submittedAt.seconds*1000).toLocaleString() : ''}`;
+            document.getElementById('modal-question-title').innerText = `Q${qIdx+1}: ${answer.questionTitle}`;
+            document.getElementById('modal-text').innerText = answer.text || "（沒有文字說明）";
+            
+            // Hide Student Interactions for Teacher
+            document.getElementById('modal-like-container').classList.add('hidden');
+            document.getElementById('modal-comments-section').classList.add('hidden');
+            document.getElementById('modal-comment-input-area').classList.add('hidden');
+            
+            // Show stats for teacher (New Feature)
+            document.getElementById('modal-like-container').classList.remove('hidden');
+            document.getElementById('modal-comments-section').classList.remove('hidden');
+            // But keep input hidden
+            document.getElementById('modal-comment-input-area').classList.add('hidden');
+            
+            // For teacher, like button should be read-only visual
+            const likes = answer.likes || [];
+            const likeBtn = document.getElementById('modal-like-btn');
+            // Remove click listener or make it do nothing
+            likeBtn.onclick = null;
+            likeBtn.className = 'flex items-center gap-2 text-pink-500 bg-pink-50 px-4 py-2 rounded-full border border-pink-200 cursor-default';
+            likeBtn.innerHTML = `<i class="fas fa-heart text-xl"></i><span class="text-sm font-bold">按讚數</span><span id="modal-like-count" class="bg-white text-xs font-bold px-2 py-0.5 rounded-full border border-pink-200 ml-1 text-slate-800">${likes.length}</span>`;
+
+            // Populate comments
+            const commentsList = document.getElementById('comments-list');
+            const comments = answer.comments || [];
+            if (comments.length === 0) { 
+                commentsList.innerHTML = '<p class="text-slate-400 text-sm text-center italic py-4">暫無留言</p>'; 
+            } else { 
+                commentsList.innerHTML = comments.map(c => `
+                    <div class="bg-slate-50 p-3 rounded-lg border border-slate-200">
+                        <div class="flex justify-between items-start mb-1">
+                            <span class="font-bold text-indigo-600 text-xs">${c.authorSeat}號 ${escapeHtml(c.authorName)}</span>
+                            <span class="text-xs text-slate-400">${new Date(c.createdAt).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</span>
+                        </div>
+                        <p class="text-slate-700 text-sm whitespace-pre-wrap">${escapeHtml(c.text)}</p>
+                    </div>
+                `).join(''); 
+            }
+            
+            modal.classList.remove('hidden');
+            document.body.style.overflow = 'hidden';
+        };
+
+        document.getElementById('modal-close').onclick = () => {
+            document.getElementById('modal-overlay').classList.add('hidden');
+            document.body.style.overflow = '';
+            if (activeModalUnsubscribe) { activeModalUnsubscribe(); activeModalUnsubscribe = null; }
+        };
+
+        // --- Edit Session + Drag & Drop ---
+        const editModal = document.getElementById('edit-session-modal');
+        const editQContainer = document.getElementById('edit-question-container');
+        let dragSrcEl = null;
+
+        function createDraggableQuestionRow(qText = "") {
+            const div = document.createElement('div');
+            div.className = "draggable-item flex gap-2 items-center mb-2 p-1 rounded bg-white border border-transparent hover:border-slate-200";
+            div.draggable = true;
+            div.innerHTML = `<i class="fas fa-grip-vertical text-slate-300 cursor-move hover:text-indigo-500 p-2 handle"></i><span class="q-label bg-slate-100 px-3 py-2 rounded text-slate-500 font-mono font-bold select-none">Q</span><input type="text" class="edit-question-input flex-grow px-4 py-2 border border-slate-300 rounded-lg outline-none focus:border-indigo-500" value="${escapeHtml(qText)}" placeholder="輸入題目內容..." required><button type="button" class="delete-q-btn text-red-400 hover:text-red-600 p-2 transition rounded-full hover:bg-red-50" title="刪除此題"><i class="fas fa-times"></i></button>`;
+            div.addEventListener('dragstart', handleDragStart); div.addEventListener('dragover', handleDragOver); div.addEventListener('dragenter', handleDragEnter); div.addEventListener('dragleave', handleDragLeave); div.addEventListener('drop', handleDrop); div.addEventListener('dragend', handleDragEnd);
+            div.querySelector('.delete-q-btn').onclick = function() { if (editQContainer.children.length <= 1) { alert("至少保留一題"); return; } div.remove(); updateEditQuestionLabels(); };
+            return div;
+        }
+        function handleDragStart(e) { this.classList.add('dragging'); dragSrcEl = this; e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/html', this.innerHTML); }
+        function handleDragOver(e) { if (e.preventDefault) { e.preventDefault(); } e.dataTransfer.dropEffect = 'move'; return false; }
+        function handleDragEnter(e) { this.classList.add('over'); } function handleDragLeave(e) { this.classList.remove('over'); }
+        function handleDrop(e) { if (e.stopPropagation) { e.stopPropagation(); } if (dragSrcEl !== this) { const allItems = [...editQContainer.querySelectorAll('.draggable-item')]; const srcIndex = allItems.indexOf(dragSrcEl); const targetIndex = allItems.indexOf(this); if (srcIndex < targetIndex) { this.after(dragSrcEl); } else { this.before(dragSrcEl); } } return false; }
+        function handleDragEnd() { this.classList.remove('dragging'); [...editQContainer.querySelectorAll('.draggable-item')].forEach(item => item.classList.remove('over')); updateEditQuestionLabels(); }
+        function updateEditQuestionLabels() { const labels = editQContainer.querySelectorAll('.q-label'); labels.forEach((label, index) => { label.innerText = `Q${index + 1}`; }); }
+
+        window.openEditSession = async function(id) {
+            const q=query(SESSIONS_COL); const s=await getDocs(q); const session=s.docs.find(d=>d.id===id)?.data(); if(!session){alert("Error");return;}
+            document.getElementById('edit-session-id').value=id; document.getElementById('edit-session-name').value=session.name; document.getElementById('edit-session-code').value=session.code; document.getElementById('edit-session-peer-review').checked=!!session.allowPeerReview;
+            editQContainer.innerHTML = ''; 
+            session.questions.forEach((q) => { editQContainer.appendChild(createDraggableQuestionRow(q)); });
+            updateEditQuestionLabels(); editModal.classList.remove('hidden');
+        };
+        window.closeEditSessionModal = () => editModal.classList.add('hidden');
+        window.addEditQuestionInput = () => { if(editQContainer.children.length >= 5) { alert("最多 5 題"); return; } editQContainer.appendChild(createDraggableQuestionRow("")); updateEditQuestionLabels(); };
+        window.saveEditSession = async () => {
+            const id=document.getElementById('edit-session-id').value; const name=document.getElementById('edit-session-name').value; const allow=document.getElementById('edit-session-peer-review').checked; 
+            const qs=Array.from(document.querySelectorAll('.edit-question-input')).map(i=>i.value.trim()).filter(v=>v);
+            if(!name||!qs.length)return; 
+            // Removed confirm dialog for smoother UX as requested, replaced with Toast
+            try{ await updateDoc(doc(db,'artifacts',appId,'public','data','sessions',id),{name,questions:qs,allowPeerReview:allow}); 
+                showToast("課程修改成功！"); 
+                closeEditSessionModal(); 
+                fetchAndRenderSessionList(); 
+            }catch(e){showToast("修改失敗", "error");}
+        };
+        
+        window.deleteSession = async (id) => { if(!confirm("Delete?"))return; if(prompt("Password:")!=='ai@plkgps'){alert("Wrong Pwd");return;} try{await deleteDoc(doc(db,'artifacts',appId,'public','data','sessions',id));fetchAndRenderSessionList();showToast("已刪除課程");}catch(e){alert("Error");} };
+        
+        async function loadTeacherSessionsForDropdown(preselectId = null) {
+            const sel=document.getElementById('teacher-session-select'); sel.innerHTML='<option>Loading...</option>';
+            const q=query(SESSIONS_COL); const s=await getDocs(q); sessionList=s.docs.map(d=>({id:d.id,...d.data()})); sessionList.sort((a,b)=>(b.createdAt?.seconds||0)-(a.createdAt?.seconds||0));
+            sel.innerHTML='<option value="">請選擇一個作業...</option>'; 
+            sessionList.forEach(s=>{
+                const selected = s.id === preselectId ? 'selected' : '';
+                sel.innerHTML+=`<option value="${s.id}" ${selected}>${new Date(s.createdAt.seconds*1000).toLocaleDateString()} - ${s.name}</option>`
+            });
+            // If preselected, trigger change event manually to load submissions
+            if (preselectId) {
+                sel.dispatchEvent(new Event('change'));
+            }
+        }
+        document.getElementById('teacher-session-select').addEventListener('change', async function() {
+            const sid=this.value; const s=sessionList.find(i=>i.id===sid); const g=document.getElementById('submissions-grid');
+            
+            // Reset state on new session selection
+            isFirstSubmissionsLoad = true;
+            previousSubmissionIds.clear();
+
+            if(!sid){g.innerHTML='...'; document.getElementById('export-pdf-student-btn').classList.add('hidden'); document.getElementById('export-pdf-question-btn').classList.add('hidden'); document.getElementById('view-student-list-btn').classList.add('hidden'); return;}
+            document.getElementById('session-code-display').classList.remove('hidden'); document.getElementById('session-code-display').querySelector('span').innerText=s.code;
+            document.getElementById('export-pdf-student-btn').classList.remove('hidden');
+            document.getElementById('export-pdf-question-btn').classList.remove('hidden');
+            document.getElementById('view-student-list-btn').classList.remove('hidden');
+            const t=document.getElementById('question-tabs'); t.classList.remove('hidden'); t.innerHTML='';
+            s.questions.forEach((q,i)=>{const b=document.createElement('button'); b.className=`px-3 py-1 rounded text-sm transition ${i===0?'bg-indigo-600 text-white':'bg-slate-200'}`; b.innerText=`Q${i+1}`; b.onclick=()=>filterByQuestion(i); t.appendChild(b);});
+            currentFilterQIndex=0; g.innerHTML='Loading...';
+            onSnapshot(query(SUBMISSIONS_COL,where("sessionId","==",sid)),(sn)=>{
+                
+                const newIds = new Set();
+                if (!isFirstSubmissionsLoad) {
+                    sn.docChanges().forEach(change => {
+                        if (change.type === "added") {
+                            newIds.add(change.doc.id);
+                        }
+                    });
+                }
+
+                submissionsData=sn.docs.map(d=>({id:d.id,...d.data()})); 
+                submissionsData.sort((a,b)=>parseInt(a.studentNumber)-parseInt(b.studentNumber)); 
+                
+                renderSubmissionGrid(newIds);
+                
+                isFirstSubmissionsLoad = false;
+                
+                if(!document.getElementById('student-list-modal').classList.contains('hidden')) { renderStudentList(); }
+            });
+        });
+        window.filterByQuestion=(i)=>{currentFilterQIndex=i; renderSubmissionGrid(); Array.from(document.getElementById('question-tabs').children).forEach((c,idx)=>c.className=`px-3 py-1 rounded text-sm transition ${idx===i?'bg-indigo-600 text-white':'bg-slate-200'}`)};
+        
+        function renderSubmissionGrid(newIds = new Set()){
+            const g=document.getElementById('submissions-grid'); if(!submissionsData.length){g.innerHTML='No Data';return;}
+            g.innerHTML=submissionsData.map(s=>{
+                const a=s.answers.find(x=>x.questionIndex===currentFilterQIndex)||{};
+                // Animation Logic
+                const isNew = newIds.has(s.id);
+                const animClass = isNew ? 'animate-new-sub ring-4 ring-indigo-500' : '';
+                
+                // Calculate Likes and Comments for display
+                const likesCount = (a.likes || []).length;
+                const commentsCount = (a.comments || []).length;
+                
+                return `
+                <div class="submission-card bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden cursor-pointer ${animClass}" onclick="openSubmissionModal('${s.id}',${currentFilterQIndex})">
+                    <div class="bg-indigo-50 px-3 py-2 border-b border-indigo-100 font-bold text-indigo-900 flex justify-between items-center">
+                        <span>${s.studentNumber}號 ${escapeHtml(s.studentName)}</span>
+                    </div>
+                    <div class="h-48 bg-slate-50 flex items-center justify-center p-2">
+                        <img src="${a.drawing||''}" class="max-h-full max-w-full object-contain">
+                    </div>
+                    <div class="p-3 bg-white border-t border-slate-100">
+                        <p class="text-sm text-slate-600 line-clamp-2 mb-2 min-h-[2.5em]">${escapeHtml(a.text)}</p>
+                        <div class="flex gap-3 text-xs text-slate-400 font-medium">
+                            <span class="flex items-center gap-1"><i class="fas fa-heart text-pink-400"></i> ${likesCount}</span>
+                            <span class="flex items-center gap-1"><i class="fas fa-comment text-blue-400"></i> ${commentsCount}</span>
+                        </div>
+                    </div>
+                </div>`
+            }).join('');
+        }
+        
+        window.openStudentListModal = function() {
+            document.getElementById('student-list-modal').classList.remove('hidden');
+            renderStudentList();
+        }
+        window.closeStudentListModal = function() {
+            document.getElementById('student-list-modal').classList.add('hidden');
+        }
+        window.renderStudentList = function() {
+            const container = document.getElementById('student-list-container');
+            const countDisplay = document.getElementById('student-count-display');
+            countDisplay.innerText = `共 ${submissionsData.length} 位學生`;
+            
+            if(submissionsData.length === 0) {
+                container.innerHTML = '<p class="text-slate-400 text-center py-4">目前沒有學生提交作業</p>';
+                return;
+            }
+            
+            container.innerHTML = submissionsData.map(sub => `
+                <div class="flex justify-between items-center p-3 bg-slate-50 rounded-lg border border-slate-200">
+                    <div>
+                        <span class="font-bold text-slate-800">${sub.studentNumber}號 ${escapeHtml(sub.studentName)}</span>
+                        <div class="text-xs text-slate-400">提交時間: ${sub.submittedAt ? new Date(sub.submittedAt.seconds*1000).toLocaleString() : '未知'}</div>
+                    </div>
+                    <button onclick="resetSubmission('${sub.id}')" class="px-3 py-1 text-xs bg-white border border-red-200 text-red-500 hover:bg-red-50 hover:border-red-300 rounded transition font-medium">
+                        重設
+                    </button>
+                </div>
+            `).join('');
+        }
+
+        window.resetSubmission = async function(id) {
+            if(!confirm("重設後，該位學生的作業將被刪除，且可以重新提交。\n確定要執行嗎？")) return;
+            try {
+                await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'submissions', id));
+                showToast("已重設學生作業");
+            } catch(e) { console.error(e); showToast("重設失敗", "error"); }
+        };
+
+        window.resetAllSubmissions = async function() {
+            const sid = document.getElementById('teacher-session-select').value;
+            if(!sid) return;
+            const count = submissionsData.length;
+            if(count === 0) { alert("目前沒有任何提交"); return; }
+            
+            if(!confirm(`警告：即將重設本課程所有 ${count} 位學生的作業！\n資料將被刪除且無法復原。\n\n確定要執行嗎？`)) return;
+            
+            const password = prompt("請輸入管理員密碼以確認重設所有：");
+            if (password !== 'ai@plkgps') { alert("密碼錯誤"); return; }
+            
+            try {
+                // Batch delete (limit 500 per batch, simple loop here)
+                const q = query(SUBMISSIONS_COL, where("sessionId", "==", sid));
+                const snap = await getDocs(q);
+                const batch = writeBatch(db);
+                snap.docs.forEach(doc => {
+                    batch.delete(doc.ref);
+                });
+                await batch.commit();
+                showToast("已重設所有提交");
+            } catch(e) {
+                console.error(e); showToast("重設失敗", "error");
+            }
+        };
+
+        window.exportSessionPDF = async function(mode = 'student') {
+            if(!submissionsData || submissionsData.length === 0) { alert("目前沒有學生作品可以匯出"); return; }
+            const btnId = mode === 'student' ? 'export-pdf-student-btn' : 'export-pdf-question-btn';
+            const btn = document.getElementById(btnId);
+            const originalText = btn.innerHTML;
+            btn.disabled = true; 
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 處理中...';
+
+            const container = document.createElement('div');
+            container.style.width = '100%'; 
+            container.style.padding = '20px';
+            container.style.fontFamily = 'Noto Sans TC, sans-serif'; 
+            
+            // Generate Filename
+            const now = new Date();
+            const dateStr = now.getFullYear() + 
+                            String(now.getMonth()+1).padStart(2,'0') + 
+                            String(now.getDate()).padStart(2,'0') + '_' + 
+                            String(now.getHours()).padStart(2,'0') + 
+                            String(now.getMinutes()).padStart(2,'0');
+            
+            const teacherSessionId = document.getElementById('teacher-session-select').value;
+            const currentTeacherSession = sessionList.find(s => s.id === teacherSessionId);
+            const sessionNameSafe = currentTeacherSession ? currentTeacherSession.name.replace(/[^\w\u4e00-\u9fa5]/g, '_') : 'Session';
+            const modeText = mode === 'student' ? 'ByStudent' : 'ByQuestion';
+            const filename = `${sessionNameSafe}_${modeText}_${dateStr}.pdf`;
+
+            const sessionName = document.querySelector('#teacher-session-select option:checked').text;
+            
+            // Header
+            container.innerHTML = `
+                <div style="text-align:center; margin-bottom: 30px; border-bottom: 2px solid #333; padding-bottom: 10px;">
+                    <h1 style="margin:0; font-size: 24px;">${sessionName}</h1>
+                    <p style="margin:5px 0; color:#666;">匯出模式: ${mode === 'student' ? '按學生' : '按題目'}</p>
+                    <p style="margin:5px 0; color:#666;">匯出時間: ${now.toLocaleString()}</p>
+                    <p style="margin:0; color:#666;">學生人數: ${submissionsData.length} 人</p>
+                </div>
+            `;
+
+            const sortedSubmissions = [...submissionsData].sort((a,b) => parseInt(a.studentNumber) - parseInt(b.studentNumber));
+
+            if (mode === 'student') {
+                // --- MODE: BY STUDENT ---
+                sortedSubmissions.forEach(sub => {
+                    let studentHtml = `
+                        <div style="margin-bottom: 40px; page-break-inside: avoid;">
+                            <div style="background-color: #f3f4f6; padding: 10px 15px; border-radius: 8px; margin-bottom: 15px; border-left: 5px solid #4f46e5;">
+                                <h2 style="margin: 0; font-size: 18px; color: #111827;">${sub.studentNumber}號 ${escapeHtml(sub.studentName)}</h2>
+                            </div>
+                            <div style="display: flex; flex-wrap: wrap; gap: 15px;">
+                    `;
+                    const answers = (sub.answers || []).sort((a,b) => a.questionIndex - b.questionIndex);
+                    if (answers.length === 0) { studentHtml += `<p style="color:#999; padding:10px;">未提交答案</p>`; }
+                    answers.forEach((ans, idx) => {
+                        const img = ans.drawing || ''; 
+                        const text = escapeHtml(ans.text || ''); 
+                        const qTitle = escapeHtml(ans.questionTitle || `題目 ${idx+1}`);
+                        
+                        studentHtml += `
+                            <div style="width: 48%; border: 1px solid #e5e7eb; border-radius: 8px; overflow: hidden; margin-bottom: 10px; background: #fff;">
+                                <div style="background: #f9fafb; padding: 8px 12px; border-bottom: 1px solid #e5e7eb;">
+                                    <h4 style="margin: 0; font-size: 14px; color: #4b5563;">Q${idx+1}: ${qTitle}</h4>
+                                </div>
+                                <div style="padding: 10px;">
+                                    ${img ? `<div style="height: 180px; display: flex; align-items: center; justify-content: center; background-color: #fff; margin-bottom: 10px; border: 1px dashed #e5e7eb;">
+                                        <img src="${img}" style="max-width: 100%; max-height: 100%; object-fit: contain;">
+                                    </div>` : '<div style="height:180px; display:flex; align-items:center; justify-content:center; color:#ccc;">無繪圖</div>'}
+                                    
+                                    <div style="background: #fefff5; padding: 8px; border-radius: 4px; border: 1px solid #f3f4f6; min-height: 40px;">
+                                        <p style="margin: 0; font-size: 13px; color: #374151; white-space: pre-wrap;">${text || '<span style="color:#ccc">無文字說明</span>'}</p>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                    });
+                    studentHtml += `</div></div><hr style="border: 0; border-top: 1px dashed #ccc; margin: 30px 0;">`;
+                    container.innerHTML += studentHtml;
+                });
+            } else {
+                // --- MODE: BY QUESTION ---
+                if (currentTeacherSession && currentTeacherSession.questions) {
+                    currentTeacherSession.questions.forEach((qText, qIdx) => {
+                        let questionHtml = `
+                            <div style="margin-bottom: 40px; page-break-after: always;">
+                                <div style="background-color: #e0e7ff; padding: 15px; border-radius: 8px; margin-bottom: 20px; border-left: 5px solid #4338ca;">
+                                    <h2 style="margin: 0; font-size: 20px; color: #312e81;">Q${qIdx+1}: ${escapeHtml(qText)}</h2>
+                                </div>
+                                <div style="display: flex; flex-wrap: wrap; gap: 15px;">
+                        `;
+                        
+                        sortedSubmissions.forEach(sub => {
+                            const ans = sub.answers ? sub.answers.find(a => a.questionIndex === qIdx) : null;
+                            const studentName = `${sub.studentNumber}號 ${escapeHtml(sub.studentName)}`;
+                            
+                            if (ans) {
+                                const img = ans.drawing || '';
+                                const text = escapeHtml(ans.text || '');
+                                
+                                questionHtml += `
+                                    <div style="width: 31%; border: 1px solid #e5e7eb; border-radius: 8px; overflow: hidden; margin-bottom: 10px; background: #fff; page-break-inside: avoid;">
+                                        <div style="background: #f9fafb; padding: 5px 10px; border-bottom: 1px solid #e5e7eb;">
+                                            <h4 style="margin: 0; font-size: 13px; color: #111827; font-weight: bold;">${studentName}</h4>
+                                        </div>
+                                        <div style="padding: 8px;">
+                                            ${img ? `<div style="height: 120px; display: flex; align-items: center; justify-content: center; background-color: #fff; margin-bottom: 5px; border: 1px dashed #e5e7eb;">
+                                                <img src="${img}" style="max-width: 100%; max-height: 100%; object-fit: contain;">
+                                            </div>` : '<div style="height:120px; display:flex; align-items:center; justify-content:center; color:#ccc; font-size: 12px;">無繪圖</div>'}
+                                            
+                                            <div style="background: #fefff5; padding: 5px; border-radius: 4px; border: 1px solid #f3f4f6; min-height: 30px;">
+                                                <p style="margin: 0; font-size: 12px; color: #374151; white-space: pre-wrap; line-height: 1.3;">${text || '<span style="color:#ccc">無文字</span>'}</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                `;
+                            } else {
+                                // Student submitted but didn't have this question (e.g. added later)
+                                questionHtml += `
+                                    <div style="width: 31%; border: 1px solid #e5e7eb; border-radius: 8px; overflow: hidden; margin-bottom: 10px; background: #f3f4f6; opacity: 0.7; page-break-inside: avoid;">
+                                        <div style="padding: 5px 10px; border-bottom: 1px solid #e5e7eb;">
+                                            <h4 style="margin: 0; font-size: 13px; color: #6b7280;">${studentName}</h4>
+                                        </div>
+                                        <div style="padding: 20px; text-align: center; font-size: 12px; color: #9ca3af;">
+                                            此題未作答
+                                        </div>
+                                    </div>
+                                `;
+                            }
+                        });
+                        
+                        questionHtml += `</div></div>`;
+                        container.innerHTML += questionHtml;
+                    });
+                }
+            }
+
+            // Append to body to ensure rendering
+            document.body.appendChild(container);
+
+            const opt = {
+                margin:       10, 
+                filename:     filename,
+                image:        { type: 'jpeg', quality: 0.95 },
+                html2canvas:  { scale: 2, useCORS: true, logging: false },
+                jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' },
+                pagebreak:    { mode: ['avoid-all', 'css', 'legacy'] } 
+            };
+
+            try { 
+                await html2pdf().set(opt).from(container).save(); 
+            } 
+            catch(e) { 
+                console.error("PDF Export Error:", e); 
+                alert("匯出 PDF 時發生錯誤，請嘗試減少學生數量或分批匯出。"); 
+            } 
+            finally { 
+                document.body.removeChild(container);
+                btn.disabled = false; 
+                btn.innerHTML = originalText; 
+            }
+        }
+        
+        function escapeHtml(text) { 
+            if (!text) return text; 
+            return text.replace(/&/g, "&amp;")
+                       .replace(/</g, "&lt;")
+                       .replace(/>/g, "&gt;")
+                       .replace(/"/g, "&quot;")
+                       .replace(/'/g, "&#039;"); 
+        }
+        
+        window.openTeacherCodeModal = function(name, code) {
+            document.getElementById('zoom-session-name').innerText = name;
+            document.getElementById('zoom-session-code').innerText = code;
+            document.getElementById('teacher-code-modal').classList.remove('hidden');
+        }
+        window.closeTeacherCodeModal = function() {
+            document.getElementById('teacher-code-modal').classList.add('hidden');
+        }
+        window.copyTeacherCode = function() {
+            const code = document.getElementById('zoom-session-code').innerText;
+            const textArea = document.createElement("textarea"); textArea.value = code; document.body.appendChild(textArea); textArea.select();
+            try { document.execCommand('copy'); showToast('代碼已複製'); } catch (err) {}
+            document.body.removeChild(textArea);
+        }
+
+        window.openStudentInfoModal = function() {
+            if(!currentStudentInfo) return;
+            // Add Safety Check: Ensure elements exist before updating
+            if(document.getElementById('zoom-session-name-display'))
+                 document.getElementById('zoom-session-name-display').innerText = currentSession.name;
+            document.getElementById('zoom-student-seat').innerText = currentStudentInfo.seat;
+            document.getElementById('zoom-student-name').innerText = currentStudentInfo.name || '(未填姓名)';
+            document.getElementById('student-info-modal').classList.remove('hidden');
+        }
+        window.closeStudentInfoModal = function() {
+            document.getElementById('student-info-modal').classList.add('hidden');
+        }
+    </script>
+</body>
+</html>

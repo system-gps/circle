@@ -1,0 +1,1181 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>圓的幾何與藝術</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            font-family: 'Noto Sans TC', sans-serif;
+            touch-action: none;
+            user-select: none;
+        }
+        canvas {
+            outline: none;
+        }
+        /* 藝術模式畫布樣式 */
+        #artCanvas {
+            background-color: white;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+            transition: width 0.3s, height 0.3s; 
+        }
+        
+        .control-panel {
+            backdrop-filter: blur(10px);
+            transition: all 0.3s ease;
+        }
+        /* 自定義 Checkbox */
+        .toggle-checkbox:checked {
+            right: 0;
+            border-color: #4F46E5;
+        }
+        .toggle-checkbox:checked + .toggle-label {
+            background-color: #4F46E5;
+        }
+        /* 顏色圓點 */
+        .dot { display: inline-block; width: 12px; height: 12px; border-radius: 50%; margin-right: 8px; }
+        .dot-black { background-color: #000; }
+        .dot-blue { background-color: #4F46E5; }
+        .dot-red { background-color: #DC2626; }
+        .dot-green { background-color: #059669; }
+        .dot-orange { background-color: #D97706; }
+
+        .hidden-mode { display: none !important; }
+        
+        .tab-btn {
+            position: relative;
+            transition: all 0.3s;
+        }
+        .tab-btn.active {
+            color: #4F46E5;
+            background-color: #EEF2FF;
+        }
+        .tab-btn.active::after {
+            content: '';
+            position: absolute;
+            bottom: -2px;
+            left: 0;
+            width: 100%;
+            height: 3px;
+            background-color: #4F46E5;
+            border-radius: 3px 3px 0 0;
+        }
+        
+        /* 緊湊的滑桿樣式 */
+        input[type=range] {
+            -webkit-appearance: none;
+            background: transparent;
+        }
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            height: 12px;
+            width: 12px;
+            border-radius: 50%;
+            background: #4F46E5;
+            cursor: pointer;
+            margin-top: -4px; 
+            box-shadow: 0 1px 2px rgba(0,0,0,0.2);
+        }
+        input[type=range]::-webkit-slider-runnable-track {
+            width: 100%;
+            height: 4px;
+            cursor: pointer;
+            background: #e5e7eb;
+            border-radius: 2px;
+        }
+        input[type=range]:disabled::-webkit-slider-thumb {
+            background: #9ca3af;
+        }
+        /* 輸入框樣式 */
+        input[type=number]::-webkit-inner-spin-button, 
+        input[type=number]::-webkit-outer-spin-button { 
+            -webkit-appearance: none; 
+            margin: 0; 
+        }
+    </style>
+</head>
+<body class="bg-gray-50 h-screen flex flex-col overflow-hidden">
+
+    <!-- 頂部導航列 -->
+    <header class="bg-white shadow-sm z-20 shrink-0">
+        <div class="px-4 border-b flex justify-between items-center h-16">
+            <div class="flex items-center gap-2 mr-4">
+                <h1 class="text-xl md:text-2xl font-bold text-gray-800 tracking-wide flex items-center gap-2">
+                    <svg class="w-8 h-8 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 4a2 2 0 114 0v1a1 1 0 001 1h3a1 1 0 011 1v3a1 1 0 01-1 1h-1a2 2 0 100 4v1a1 1 0 01-1 1h-3a1 1 0 01-1-1v-1a2 2 0 10-4 0v1a1 1 0 01-1 1H7a1 1 0 01-1-1v-3a1 1 0 00-1-1H4a1 1 0 01-1-1V7a1 1 0 011-1h3a1 1 0 001-1V4z"></path></svg>
+                    <span class="hidden md:inline">圓的學習工具</span>
+                </h1>
+                <span class="text-[10px] text-gray-400 font-medium translate-y-1">© GRANDMONT AI</span>
+            </div>
+            
+            <div class="flex h-full space-x-2">
+                <button onclick="switchMode('geometry')" id="tab-geometry" class="tab-btn active h-full px-6 flex items-center font-bold text-gray-600 hover:text-indigo-600">
+                    圓的探索
+                </button>
+                <button onclick="switchMode('art')" id="tab-art" class="tab-btn h-full px-6 flex items-center font-bold text-gray-600 hover:text-indigo-600">
+                    圓的藝術
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- 模式 1: 幾何探索 -->
+    <div id="mode-geometry" class="flex-grow relative flex flex-col w-full h-full overflow-hidden">
+        <div class="absolute top-2 left-1/2 -translate-x-1/2 text-sm text-gray-500 bg-white/80 px-3 py-1 rounded-full backdrop-blur-sm pointer-events-none z-10">
+            拖曳 <span class="text-indigo-600 font-bold">藍點</span> 改變大小，拖曳其他色點移動位置
+        </div>
+        <div class="flex-grow relative flex justify-center items-center bg-gray-100 overflow-hidden" id="geo-canvas-container">
+            <canvas id="geometryCanvas" class="shadow-inner"></canvas>
+            
+            <div class="absolute top-4 right-4 md:top-auto md:bottom-6 md:right-auto md:left-6 bg-white/95 p-5 rounded-xl shadow-xl border border-gray-200 control-panel w-64 max-h-[85vh] overflow-y-auto">
+                <h2 class="text-base font-bold text-gray-700 mb-3 border-b pb-2">顯示設定</h2>
+                
+                <div class="space-y-2 mb-4">
+                    <label class="flex items-center cursor-pointer hover:bg-gray-50 p-1 rounded transition">
+                        <input type="checkbox" id="showCenter" class="w-4 h-4 text-indigo-600 rounded focus:ring-indigo-500 border-gray-300">
+                        <span class="ml-2 text-gray-700 text-sm flex items-center"><span class="dot dot-black"></span>圓心</span>
+                    </label>
+                    <label class="flex items-center cursor-pointer hover:bg-gray-50 p-1 rounded transition">
+                        <input type="checkbox" id="showCircumference" class="w-4 h-4 text-indigo-600 rounded focus:ring-indigo-500 border-gray-300">
+                        <span class="ml-2 text-gray-700 text-sm flex items-center"><span class="dot dot-blue"></span>圓周</span>
+                    </label>
+                    <label class="flex items-center cursor-pointer hover:bg-gray-50 p-1 rounded transition">
+                        <input type="checkbox" id="showDiameter" class="w-4 h-4 text-indigo-600 rounded focus:ring-indigo-500 border-gray-300">
+                        <span class="ml-2 text-gray-700 text-sm flex items-center"><span class="dot dot-red"></span>直徑</span>
+                    </label>
+                    <label class="flex items-center cursor-pointer hover:bg-gray-50 p-1 rounded transition">
+                        <input type="checkbox" id="showRadius" class="w-4 h-4 text-indigo-600 rounded focus:ring-indigo-500 border-gray-300">
+                        <span class="ml-2 text-gray-700 text-sm flex items-center"><span class="dot dot-green"></span>半徑</span>
+                    </label>
+                    <label class="flex items-center cursor-pointer hover:bg-gray-50 p-1 rounded transition">
+                        <input type="checkbox" id="showChord" class="w-4 h-4 text-indigo-600 rounded focus:ring-indigo-500 border-gray-300">
+                        <span class="ml-2 text-gray-700 text-sm flex items-center"><span class="dot dot-orange"></span>弦</span>
+                    </label>
+                </div>
+
+                <div class="border-t border-gray-200 my-3"></div>
+
+                <div class="space-y-3">
+                    <div class="flex items-center justify-between">
+                        <span class="text-gray-700 text-sm font-medium">顯示名稱</span>
+                        <label class="relative inline-flex items-center cursor-pointer">
+                            <input type="checkbox" id="toggleLabels" class="sr-only peer">
+                            <div class="w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-indigo-600"></div>
+                        </label>
+                    </div>
+
+                    <div class="bg-gray-50 p-2 rounded-lg border border-gray-100">
+                        <div class="text-xs text-gray-500 mb-2 font-medium">名稱模式</div>
+                        <div class="flex gap-2">
+                            <label class="flex-1 flex items-center justify-center p-1.5 bg-white border border-gray-200 rounded cursor-pointer hover:border-indigo-300 transition has-[:checked]:border-indigo-500 has-[:checked]:bg-indigo-50 has-[:checked]:text-indigo-700">
+                                <input type="radio" name="langMode" value="zh" class="sr-only" checked>
+                                <span class="text-xs font-bold">中文</span>
+                            </label>
+                            <label class="flex-1 flex items-center justify-center p-1.5 bg-white border border-gray-200 rounded cursor-pointer hover:border-indigo-300 transition has-[:checked]:border-indigo-500 has-[:checked]:bg-indigo-50 has-[:checked]:text-indigo-700">
+                                <input type="radio" name="langMode" value="en" class="sr-only">
+                                <span class="text-xs font-bold">英文符號</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center justify-between">
+                        <span class="text-gray-700 text-sm font-medium">顯示數值</span>
+                        <label class="relative inline-flex items-center cursor-pointer">
+                            <input type="checkbox" id="toggleValues" class="sr-only peer">
+                            <div class="w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-indigo-600"></div>
+                        </label>
+                    </div>
+
+                    <div class="bg-gray-50 p-2 rounded-lg border border-gray-100">
+                        <div class="text-xs text-gray-500 mb-2 font-medium">單位選擇</div>
+                        <div class="flex gap-1">
+                            <label class="flex-1 flex items-center justify-center p-1.5 bg-white border border-gray-200 rounded cursor-pointer hover:border-indigo-300 transition has-[:checked]:border-indigo-500 has-[:checked]:bg-indigo-50 has-[:checked]:text-indigo-700">
+                                <input type="radio" name="unitMode" value="" class="sr-only" checked>
+                                <span class="text-xs font-bold">無</span>
+                            </label>
+                            <label class="flex-1 flex items-center justify-center p-1.5 bg-white border border-gray-200 rounded cursor-pointer hover:border-indigo-300 transition has-[:checked]:border-indigo-500 has-[:checked]:bg-indigo-50 has-[:checked]:text-indigo-700">
+                                <input type="radio" name="unitMode" value="cm" class="sr-only">
+                                <span class="text-xs font-bold">cm</span>
+                            </label>
+                            <label class="flex-1 flex items-center justify-center p-1.5 bg-white border border-gray-200 rounded cursor-pointer hover:border-indigo-300 transition has-[:checked]:border-indigo-500 has-[:checked]:bg-indigo-50 has-[:checked]:text-indigo-700">
+                                <input type="radio" name="unitMode" value="m" class="sr-only">
+                                <span class="text-xs font-bold">m</span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mt-4 pt-3 border-t text-xs text-gray-400">
+                    <p>1 格 = 1 單位</p>
+                    <p>π ≈ 3.14</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 模式 2: 圓的藝術 -->
+    <div id="mode-art" class="hidden-mode flex-grow relative flex flex-row w-full h-full overflow-hidden" tabindex="0">
+        
+        <!-- 側邊控制面板 (左側垂直排列) -->
+        <div class="w-52 flex-shrink-0 bg-white border-r border-gray-200 p-4 flex flex-col gap-4 overflow-y-auto shadow-sm z-10 h-full">
+            <h2 class="text-sm font-bold text-gray-700 border-b pb-2">繪圖工具箱</h2>
+
+            <!-- 工具 -->
+            <div class="grid grid-cols-2 gap-2">
+                <button id="addCircleBtn" class="flex flex-col items-center justify-center p-2 rounded hover:bg-indigo-50 text-indigo-600 border border-gray-200 hover:border-indigo-200 transition" title="新增圓形">
+                    <div class="w-6 h-6 rounded-full border-2 border-current mb-1"></div>
+                    <span class="text-[10px]">圓形</span>
+                </button>
+                <button id="addLineBtn" class="flex flex-col items-center justify-center p-2 rounded hover:bg-indigo-50 text-indigo-600 border border-gray-200 hover:border-indigo-200 transition" title="新增直線">
+                    <div class="w-6 h-0.5 bg-current transform -rotate-45 mb-1"></div>
+                    <span class="text-[10px]">直線</span>
+                </button>
+                <button id="addTextBtn" class="flex flex-col items-center justify-center p-2 rounded hover:bg-indigo-50 text-indigo-600 border border-gray-200 hover:border-indigo-200 transition font-serif font-bold text-lg" title="新增文字">
+                    <span class="mb-1">T</span>
+                    <span class="text-[10px] font-sans font-normal">文字</span>
+                </button>
+                <button id="exportBtn" class="flex flex-col items-center justify-center p-2 rounded hover:bg-indigo-50 text-indigo-600 border border-gray-200 hover:border-indigo-200 transition" title="匯出圖片 (16:9)">
+                     <svg class="w-6 h-6 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                     <span class="text-[10px]">匯出</span>
+                </button>
+            </div>
+
+            <div class="border-t border-gray-100"></div>
+
+            <!-- 編輯 -->
+            <div class="grid grid-cols-2 gap-2">
+                <button id="copyBtn" class="px-2 py-1 text-xs bg-white border border-gray-300 rounded hover:bg-gray-50 text-gray-700 disabled:opacity-50" title="Ctrl+C">複製</button>
+                <button id="pasteBtn" class="px-2 py-1 text-xs bg-white border border-gray-300 rounded hover:bg-gray-50 text-gray-700 disabled:opacity-50" title="Ctrl+V">貼上</button>
+                <button id="deleteBtn" class="col-span-1 px-2 py-1 text-xs bg-white border border-red-200 text-red-500 rounded hover:bg-red-50 disabled:opacity-50" title="Delete">刪除</button>
+                <button id="clearAllBtn" class="col-span-1 px-2 py-1 text-xs bg-white border border-red-200 text-red-600 rounded hover:bg-red-50">全清</button>
+            </div>
+
+            <div class="border-t border-gray-100"></div>
+
+            <!-- 樣式 -->
+            <div class="flex flex-col gap-3">
+                <div class="flex items-center justify-between">
+                    <label class="text-xs font-bold text-gray-600">線條/文字</label>
+                    <input type="color" id="strokeColorPicker" value="#000000" class="w-6 h-6 rounded cursor-pointer border-none bg-transparent">
+                </div>
+                <!-- 新增粗細調整 -->
+                <div class="flex flex-col gap-1">
+                    <div class="flex justify-between items-center">
+                        <label class="text-xs font-bold text-gray-600">粗細</label>
+                        <span id="strokeWidthVal" class="text-[10px] text-gray-500">2px</span>
+                    </div>
+                    <input type="range" id="strokeWidthSlider" min="1" max="20" value="2" class="w-full h-1">
+                </div>
+                
+                <div class="flex flex-col gap-1">
+                    <div class="flex items-center justify-between">
+                        <label class="text-xs font-bold text-gray-600">填滿</label>
+                        <input type="color" id="fillColorPicker" value="#3b82f6" class="w-6 h-6 rounded cursor-pointer border-none bg-transparent" disabled>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <span class="text-[10px] text-gray-400">透</span>
+                        <input type="range" id="opacitySlider" min="0.1" max="1" step="0.1" value="0.5" class="w-full h-1" disabled>
+                    </div>
+                    <label class="flex items-center text-xs text-gray-600 cursor-pointer mt-1">
+                        <input type="checkbox" id="noFillCheck" class="mr-2" checked>
+                        無填滿
+                    </label>
+                </div>
+            </div>
+
+            <div class="border-t border-gray-100"></div>
+
+            <!-- 畫布與格線 -->
+            <div class="flex flex-col gap-3">
+                <div class="flex flex-col gap-1">
+                    <label class="text-xs font-bold text-gray-600">畫布尺寸</label>
+                    <select id="canvasSizeSelect" class="text-xs border rounded p-1 w-full bg-white">
+                        <option value="screen">符合視窗</option>
+                        <option value="1920x1080">16:9 (1920x1080)</option>
+                        <option value="800x600">4:3 (800x600)</option>
+                        <option value="800x800">1:1 (800x800)</option>
+                        <option value="custom">自訂...</option>
+                    </select>
+                    <!-- 自訂尺寸 (隱藏) -->
+                    <div id="customSizeInputs" class="hidden flex items-center justify-between gap-1 mt-1">
+                        <input type="number" id="customW" value="1000" class="w-12 text-[10px] border rounded px-1 text-center" placeholder="W">
+                        <span class="text-[10px]">x</span>
+                        <input type="number" id="customH" value="600" class="w-12 text-[10px] border rounded px-1 text-center" placeholder="H">
+                        <button id="applySizeBtn" class="text-[10px] bg-indigo-50 text-indigo-600 px-1 rounded">ok</button>
+                    </div>
+                </div>
+
+                <!-- 方格設定 (新增按鈕控制) -->
+                <div class="flex flex-col gap-2 bg-gray-50 p-2 rounded">
+                    <div class="flex items-center justify-between">
+                        <label class="flex items-center cursor-pointer text-xs text-gray-700 select-none">
+                            <input type="checkbox" id="showBgGrid" class="mr-1 w-3 h-3 text-indigo-600 rounded" checked>
+                            方格
+                        </label>
+                        <label class="flex items-center cursor-pointer text-xs text-gray-700 select-none">
+                            <input type="checkbox" id="artSnap" class="mr-1 w-3 h-3 text-indigo-600 rounded" checked>
+                            吸附
+                        </label>
+                    </div>
+                    
+                    <div class="flex items-center justify-between">
+                        <span class="text-[10px] text-gray-500">大小:</span>
+                        <div class="flex items-center border border-gray-300 rounded bg-white overflow-hidden">
+                            <button id="gridSizeDec" class="w-6 h-6 flex items-center justify-center hover:bg-gray-100 text-gray-600 border-r border-gray-200 active:bg-gray-200">-</button>
+                            <input type="number" id="gridSizeInput" value="40" min="10" max="100" class="w-8 text-xs text-center border-none focus:ring-0 px-0" title="方格大小" readonly>
+                            <button id="gridSizeInc" class="w-6 h-6 flex items-center justify-center hover:bg-gray-100 text-gray-600 border-l border-gray-200 active:bg-gray-200">+</button>
+                        </div>
+                    </div>
+                </div>
+
+                <label class="flex items-center cursor-pointer text-xs text-gray-700 select-none">
+                    <input type="checkbox" id="showArtCenter" class="mr-2 w-3 h-3 text-indigo-600 rounded">
+                    顯示圓心
+                </label>
+            </div>
+        </div>
+
+        <!-- 畫布區域 (改為灰色背景) -->
+        <div class="flex-grow relative flex justify-center items-center bg-gray-200 overflow-hidden" id="art-canvas-container">
+            <canvas id="artCanvas"></canvas>
+            
+            <!-- 提示文字 (左上角) -->
+            <div class="absolute top-4 left-4 text-xs text-gray-400 pointer-events-none space-y-1 bg-white/50 p-2 rounded">
+                 <p>選取文字後按 <b>Enter</b> 編輯</p>
+                 <p>雙擊文字也可編輯</p>
+                 <p>方向鍵移動 · Shift+方向鍵加速</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 全域模式管理
+        let currentMode = 'geometry';
+
+        function switchMode(mode) {
+            currentMode = mode;
+            document.getElementById('mode-geometry').classList.add('hidden-mode');
+            document.getElementById('mode-art').classList.add('hidden-mode');
+            document.getElementById(`mode-${mode}`).classList.remove('hidden-mode');
+            document.getElementById('tab-geometry').classList.remove('active');
+            document.getElementById('tab-art').classList.remove('active');
+            document.getElementById(`tab-${mode}`).classList.add('active');
+
+            if(mode === 'geometry') {
+                resizeGeoCanvas();
+            } else {
+                resizeArtCanvas();
+                setTimeout(() => {
+                    document.getElementById('mode-art').focus();
+                    if(artObjects.length === 0) {
+                        addArtObject('circle');
+                    }
+                }, 100);
+            }
+        }
+
+        // ==========================================
+        // 模式 1: 幾何探索 (Geometry Mode)
+        // ==========================================
+        const geoCanvas = document.getElementById('geometryCanvas');
+        const geoCtx = geoCanvas.getContext('2d');
+        const geoContainer = document.getElementById('geo-canvas-container');
+
+        let geoCx, geoCy;
+        let geoRadius = 160;
+        let geoRadiusAngle = -Math.PI / 4;
+        let geoDiameterAngle = Math.PI; 
+        let geoResizeAngle = 0; 
+        let geoChordAngle1 = Math.PI * 0.75; 
+        let geoChordAngle2 = Math.PI * 0.25;
+        const gridSize = 40; 
+        let geoDragTarget = null;
+        
+        const geoState = {
+            showCenter: false, showCircumference: false, showDiameter: false, showRadius: false,
+            showChord: false, showLabels: false, showValues: false,
+            langMode: 'zh', unitMode: ''
+        };
+
+        document.querySelectorAll('#mode-geometry input[type="checkbox"]').forEach(input => {
+            input.addEventListener('change', (e) => {
+                if(geoState.hasOwnProperty(input.id)) geoState[input.id] = e.target.checked;
+                if(input.id === 'toggleLabels') geoState.showLabels = e.target.checked;
+                if(input.id === 'toggleValues') geoState.showValues = e.target.checked;
+                if(currentMode === 'geometry') drawGeo();
+            });
+        });
+        document.querySelectorAll('input[name="langMode"]').forEach(r => r.addEventListener('change', e => { geoState.langMode = e.target.value; if(currentMode === 'geometry') drawGeo(); }));
+        document.querySelectorAll('input[name="unitMode"]').forEach(r => r.addEventListener('change', e => { geoState.unitMode = e.target.value; if(currentMode === 'geometry') drawGeo(); }));
+
+        function initGeo() {
+            window.addEventListener('resize', () => { if(currentMode === 'geometry') resizeGeoCanvas(); });
+            geoCanvas.addEventListener('mousedown', handleGeoStart);
+            geoCanvas.addEventListener('mousemove', handleGeoMove);
+            window.addEventListener('mouseup', handleGeoEnd);
+            geoCanvas.addEventListener('touchstart', handleGeoStart, {passive: false});
+            window.addEventListener('touchmove', handleGeoMove, {passive: false});
+            window.addEventListener('touchend', handleGeoEnd);
+            resizeGeoCanvas();
+        }
+
+        function resizeGeoCanvas() {
+            geoCanvas.width = geoContainer.clientWidth;
+            geoCanvas.height = geoContainer.clientHeight;
+            const rawCx = geoCanvas.width / 2;
+            const rawCy = geoCanvas.height / 2;
+            geoCx = Math.round(rawCx / gridSize) * gridSize;
+            geoCy = Math.round(rawCy / gridSize) * gridSize;
+            drawGeo();
+        }
+
+        function drawGeo() {
+            geoCtx.clearRect(0, 0, geoCanvas.width, geoCanvas.height);
+            drawGeoGrid();
+            drawGeoGeometry();
+            drawGeoControls();
+        }
+
+        function drawGeoGrid() {
+            geoCtx.beginPath();
+            geoCtx.strokeStyle = '#e5e7eb';
+            geoCtx.lineWidth = 1;
+            for (let x = geoCx; x < geoCanvas.width; x += gridSize) { geoCtx.moveTo(x, 0); geoCtx.lineTo(x, geoCanvas.height); }
+            for (let x = geoCx; x > 0; x -= gridSize) { geoCtx.moveTo(x, 0); geoCtx.lineTo(x, geoCanvas.height); }
+            for (let y = geoCy; y < geoCanvas.height; y += gridSize) { geoCtx.moveTo(0, y); geoCtx.lineTo(geoCanvas.width, y); }
+            for (let y = geoCy; y > 0; y -= gridSize) { geoCtx.moveTo(0, y); geoCtx.lineTo(geoCanvas.width, y); }
+            geoCtx.stroke();
+        }
+
+        function drawGeoGeometry() {
+            const displayR = Math.round(geoRadius / gridSize);
+            const displayD = displayR * 2;
+            const displayC = (Math.PI * displayD).toFixed(2);
+            const isEng = geoState.langMode === 'en';
+            const unit = geoState.unitMode ? ' ' + geoState.unitMode : '';
+
+            geoCtx.beginPath();
+            geoCtx.arc(geoCx, geoCy, geoRadius, 0, Math.PI * 2);
+            geoCtx.lineWidth = 4;
+            geoCtx.strokeStyle = geoState.showCircumference ? '#4F46E5' : '#1F2937';
+            geoCtx.stroke();
+
+            const drawLabel = (x, y, text, color) => {
+                geoCtx.font = 'bold 16px "Noto Sans TC", sans-serif';
+                geoCtx.fillStyle = color;
+                geoCtx.textAlign = 'center';
+                geoCtx.textBaseline = 'middle';
+                geoCtx.lineWidth = 4;
+                geoCtx.strokeStyle = 'rgba(255, 255, 255, 0.9)';
+                geoCtx.strokeText(text, x, y);
+                geoCtx.fillText(text, x, y);
+            };
+
+            if (geoState.showCircumference && (geoState.showLabels || geoState.showValues)) {
+                if (!isEng || geoState.showValues) {
+                    const text = [];
+                    if (geoState.showLabels && !isEng) text.push("圓周");
+                    if (geoState.showValues) text.push(`${displayC}${unit}`);
+                    if (text.length) {
+                        const la = geoResizeAngle + Math.PI;
+                        drawLabel(geoCx + Math.cos(la)*(geoRadius+25), geoCy + Math.sin(la)*(geoRadius+25), text.join(': '), '#4F46E5');
+                    }
+                }
+            }
+
+            if (geoState.showDiameter) {
+                const dx1 = geoCx + Math.cos(geoDiameterAngle)*geoRadius, dy1 = geoCy + Math.sin(geoDiameterAngle)*geoRadius;
+                const dx2 = geoCx + Math.cos(geoDiameterAngle+Math.PI)*geoRadius, dy2 = geoCy + Math.sin(geoDiameterAngle+Math.PI)*geoRadius;
+                geoCtx.beginPath(); geoCtx.moveTo(dx1, dy1); geoCtx.lineTo(dx2, dy2);
+                geoCtx.strokeStyle = '#DC2626'; geoCtx.lineWidth = 3; geoCtx.stroke();
+                
+                if (geoState.showLabels || geoState.showValues) {
+                    const text = [];
+                    if (geoState.showLabels) text.push(isEng ? "d" : "直徑");
+                    if (geoState.showValues) text.push(`${displayD}${unit}`);
+                    drawLabel(geoCx + Math.cos(geoDiameterAngle)*geoRadius*0.5, geoCy + Math.sin(geoDiameterAngle)*geoRadius*0.5 - 15, text.join(isEng?' = ':': '), '#DC2626');
+                    if(isEng && geoState.showLabels) { drawPointLabel(dx1, dy1, "B", '#DC2626', geoDiameterAngle); drawPointLabel(dx2, dy2, "A", '#DC2626', geoDiameterAngle+Math.PI); }
+                }
+            }
+
+            if (geoState.showRadius) {
+                const rx = geoCx + Math.cos(geoRadiusAngle)*geoRadius, ry = geoCy + Math.sin(geoRadiusAngle)*geoRadius;
+                geoCtx.beginPath(); geoCtx.moveTo(geoCx, geoCy); geoCtx.lineTo(rx, ry);
+                geoCtx.strokeStyle = '#059669'; geoCtx.lineWidth = 3; geoCtx.stroke();
+                
+                if (geoState.showLabels || geoState.showValues) {
+                    const text = [];
+                    if (geoState.showLabels) text.push(isEng ? "r" : "半徑");
+                    if (geoState.showValues) text.push(`${displayR}${unit}`);
+                    const oa = geoRadiusAngle - Math.PI/2;
+                    const midRx = geoCx + Math.cos(geoRadiusAngle)*geoRadius*0.5, midRy = geoCy + Math.sin(geoRadiusAngle)*geoRadius*0.5;
+                    drawLabel(midRx + Math.cos(oa)*20, midRy + Math.sin(oa)*20, text.join(isEng?' = ':': '), '#059669');
+                    if(isEng && geoState.showLabels) drawPointLabel(rx, ry, "C", '#059669', geoRadiusAngle);
+                }
+            }
+
+            if (geoState.showChord) {
+                const cx1 = geoCx + Math.cos(geoChordAngle1)*geoRadius, cy1 = geoCy + Math.sin(geoChordAngle1)*geoRadius;
+                const cx2 = geoCx + Math.cos(geoChordAngle2)*geoRadius, cy2 = geoCy + Math.sin(geoChordAngle2)*geoRadius;
+                geoCtx.beginPath(); geoCtx.moveTo(cx1, cy1); geoCtx.lineTo(cx2, cy2);
+                geoCtx.strokeStyle = '#D97706'; geoCtx.lineWidth = 3; geoCtx.stroke();
+
+                if (geoState.showLabels || geoState.showValues) {
+                    const chordLen = (Math.sqrt((cx2-cx1)**2 + (cy2-cy1)**2) / gridSize).toFixed(2);
+                    const midX = (cx1+cx2)/2, midY = (cy1+cy2)/2;
+                    const ma = Math.atan2(midY-geoCy, midX-geoCx);
+                    const tx = midX - Math.cos(ma)*20, ty = midY - Math.sin(ma)*20;
+                    
+                    const text = [];
+                    if (geoState.showLabels) text.push(isEng ? "s" : "弦");
+                    if (geoState.showValues) text.push(`${chordLen}${unit}`);
+                    if(text.length) drawLabel(tx, ty, text.join(isEng?' = ':': '), '#D97706');
+                    if(isEng && geoState.showLabels) { drawPointLabel(cx1, cy1, "X", '#D97706', geoChordAngle1); drawPointLabel(cx2, cy2, "Y", '#D97706', geoChordAngle2); }
+                }
+            }
+
+            if (geoState.showCenter) {
+                geoCtx.beginPath(); geoCtx.arc(geoCx, geoCy, 6, 0, Math.PI*2); geoCtx.fillStyle='#000'; geoCtx.fill();
+                if(geoState.showLabels) drawLabel(geoCx, geoCy+25, isEng?"O":"圓心", '#000');
+            }
+        }
+
+        function drawPointLabel(x, y, text, color, angle) {
+            const dist = 25;
+            geoCtx.font = 'bold 18px "Noto Sans TC", sans-serif';
+            geoCtx.fillStyle = color;
+            geoCtx.textAlign = 'center';
+            geoCtx.textBaseline = 'middle';
+            geoCtx.lineWidth = 4;
+            geoCtx.strokeStyle = 'rgba(255, 255, 255, 0.9)';
+            const lx = x + Math.cos(angle)*dist, ly = y + Math.sin(angle)*dist;
+            geoCtx.strokeText(text, lx, ly); geoCtx.fillText(text, lx, ly);
+        }
+
+        function drawGeoControls() {
+            const drawCtrl = (angle, color, isDrag) => {
+                const cx = geoCx + Math.cos(angle)*geoRadius, cy = geoCy + Math.sin(angle)*geoRadius;
+                geoCtx.beginPath(); geoCtx.arc(cx, cy, isDrag?14:9, 0, Math.PI*2);
+                geoCtx.fillStyle = '#fff'; geoCtx.fill(); geoCtx.strokeStyle = color; geoCtx.lineWidth = 2; geoCtx.stroke();
+                geoCtx.beginPath(); geoCtx.arc(cx, cy, 4, 0, Math.PI*2); geoCtx.fillStyle = color; geoCtx.fill();
+                return {x: cx, y: cy};
+            };
+            const sPos = drawCtrl(geoResizeAngle, '#4F46E5', geoDragTarget==='resize');
+            if(geoDragTarget==='resize') {
+                geoCtx.fillStyle = '#1F2937'; geoCtx.font = '14px sans-serif'; geoCtx.textAlign = 'center';
+                geoCtx.fillText(`r = ${Math.round(geoRadius/gridSize)}`, sPos.x, sPos.y-25);
+            }
+            if(geoState.showDiameter) drawCtrl(geoDiameterAngle, '#DC2626', geoDragTarget==='diameter');
+            if(geoState.showRadius) drawCtrl(geoRadiusAngle, '#059669', geoDragTarget==='radius');
+            if(geoState.showChord) {
+                drawCtrl(geoChordAngle1, '#D97706', geoDragTarget==='chord1');
+                drawCtrl(geoChordAngle2, '#D97706', geoDragTarget==='chord2');
+            }
+        }
+        
+        function getGeoMousePos(e) {
+            const rect = geoCanvas.getBoundingClientRect();
+            const clientX = (e.touches && e.touches.length > 0) ? e.touches[0].clientX : e.clientX;
+            const clientY = (e.touches && e.touches.length > 0) ? e.touches[0].clientY : e.clientY;
+            return { x: clientX - rect.left, y: clientY - rect.top };
+        }
+
+        function handleGeoStart(e) {
+            if(currentMode !== 'geometry') return;
+            const pos = getGeoMousePos(e);
+            const check = (angle) => Math.hypot(pos.x - (geoCx + Math.cos(angle)*geoRadius), pos.y - (geoCy + Math.sin(angle)*geoRadius)) < 20;
+            
+            geoDragTarget = null;
+            if (geoState.showChord && check(geoChordAngle1)) geoDragTarget = 'chord1';
+            else if (geoState.showChord && check(geoChordAngle2)) geoDragTarget = 'chord2';
+            else if (geoState.showRadius && check(geoRadiusAngle)) geoDragTarget = 'radius';
+            else if (geoState.showDiameter && check(geoDiameterAngle)) geoDragTarget = 'diameter';
+            else if (check(geoResizeAngle)) geoDragTarget = 'resize';
+            else if (Math.abs(Math.hypot(pos.x-geoCx, pos.y-geoCy) - geoRadius) < 15) {
+                geoDragTarget = 'resize';
+                geoResizeAngle = Math.atan2(pos.y - geoCy, pos.x - geoCx);
+            }
+            if (geoDragTarget) { e.preventDefault(); drawGeo(); }
+        }
+
+        function handleGeoMove(e) {
+            if(currentMode !== 'geometry') return;
+            const pos = getGeoMousePos(e);
+            if (!geoDragTarget) {
+                let cursor = 'default';
+                const check = (angle) => Math.hypot(pos.x - (geoCx + Math.cos(angle)*geoRadius), pos.y - (geoCy + Math.sin(angle)*geoRadius)) < 20;
+                const onCircle = Math.abs(Math.hypot(pos.x-geoCx, pos.y-geoCy) - geoRadius) < 15;
+                if ((geoState.showChord && (check(geoChordAngle1) || check(geoChordAngle2))) ||
+                    (geoState.showRadius && check(geoRadiusAngle)) ||
+                    (geoState.showDiameter && check(geoDiameterAngle)) ||
+                    check(geoResizeAngle) || onCircle) cursor = 'pointer';
+                geoCanvas.style.cursor = cursor;
+                return;
+            }
+            e.preventDefault();
+            const angle = Math.atan2(pos.y - geoCy, pos.x - geoCx);
+            if (geoDragTarget === 'resize') {
+                geoResizeAngle = angle;
+                let dist = Math.hypot(pos.x - geoCx, pos.y - geoCy);
+                let sr = Math.round(dist / gridSize) * gridSize;
+                if(sr < gridSize) sr = gridSize;
+                const maxR = Math.min(geoCx, geoCy, geoCanvas.width-geoCx, geoCanvas.height-geoCy) - 20;
+                if(sr > maxR && maxR > gridSize) sr = Math.floor(maxR/gridSize)*gridSize; 
+                geoRadius = sr;
+            }
+            else if (geoDragTarget === 'radius') geoRadiusAngle = angle;
+            else if (geoDragTarget === 'diameter') geoDiameterAngle = angle;
+            else if (geoDragTarget === 'chord1') geoChordAngle1 = angle;
+            else if (geoDragTarget === 'chord2') geoChordAngle2 = angle;
+            drawGeo();
+        }
+
+        function handleGeoEnd() {
+            if(currentMode !== 'geometry') return;
+            geoDragTarget = null;
+            drawGeo();
+        }
+
+        // ==========================================
+        // 模式 2: 圓的藝術 (Art Mode)
+        // ==========================================
+        const artCanvas = document.getElementById('artCanvas');
+        const artCtx = artCanvas.getContext('2d');
+        const artContainer = document.getElementById('art-canvas-container');
+
+        let artObjects = []; 
+        let selectedObjIdx = -1;
+        let artClipboard = null;
+        let artAction = null; 
+        let artDragOffset = {x: 0, y: 0};
+        let artGridSize = 40;
+        let showArtBgGrid = true;
+        let showArtCenter = false;
+        
+        // 畫布設定
+        let artCanvasConfig = { mode: 'screen', width: 0, height: 0 }; 
+
+        // Base Class for Art Objects
+        class ArtObject {
+            constructor(x, y) { this.x = x; this.y = y; this.color = '#000000'; this.lineWidth = 2; }
+            draw(ctx, isSelected) {}
+            contains(x, y) { return false; }
+            hitHandle(x, y) { return null; }
+            move(dx, dy) { this.x += dx; this.y += dy; }
+            resize(handle, x, y, snap) {}
+        }
+
+        class ArtCircle extends ArtObject {
+            constructor(x, y, r) {
+                super(x, y);
+                this.r = r;
+                this.type = 'circle';
+                this.fillColor = 'transparent';
+                this.fillOpacity = 0.5;
+                this.resizeAngle = 0;
+            }
+            draw(ctx, isSelected) {
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.r, 0, Math.PI * 2);
+                if (this.fillColor !== 'transparent') {
+                    ctx.save();
+                    const hex = this.fillColor;
+                    const r = parseInt(hex.slice(1, 3), 16), g = parseInt(hex.slice(3, 5), 16), b = parseInt(hex.slice(5, 7), 16);
+                    ctx.fillStyle = `rgba(${r}, ${g}, ${b}, ${this.fillOpacity})`;
+                    ctx.fill();
+                    ctx.restore();
+                }
+                ctx.lineWidth = this.lineWidth;
+                ctx.strokeStyle = this.color;
+                ctx.stroke();
+                if (showArtCenter) { ctx.beginPath(); ctx.arc(this.x, this.y, 3, 0, Math.PI*2); ctx.fillStyle = this.color; ctx.fill(); }
+                if (isSelected) this.drawSelection(ctx);
+            }
+            drawSelection(ctx) {
+                ctx.strokeStyle = '#4F46E5'; ctx.lineWidth=1; ctx.setLineDash([5, 5]); ctx.beginPath(); ctx.arc(this.x, this.y, this.r + 2 + this.lineWidth/2, 0, Math.PI*2); ctx.stroke(); ctx.setLineDash([]);
+                const hx = this.x + Math.cos(this.resizeAngle) * this.r, hy = this.y + Math.sin(this.resizeAngle) * this.r;
+                this.drawHandle(ctx, hx, hy);
+            }
+            drawHandle(ctx, x, y) {
+                ctx.beginPath(); ctx.arc(x, y, 6, 0, Math.PI*2); ctx.fillStyle = '#fff'; ctx.fill(); ctx.strokeStyle = '#4F46E5'; ctx.lineWidth = 2; ctx.stroke();
+            }
+            contains(x, y) { return Math.hypot(x - this.x, y - this.y) <= this.r + this.lineWidth/2; }
+            hitHandle(x, y) {
+                const hx = this.x + Math.cos(this.resizeAngle) * this.r, hy = this.y + Math.sin(this.resizeAngle) * this.r;
+                return Math.hypot(x - hx, y - hy) < 10 ? 'resize' : null;
+            }
+            resize(handle, x, y, snap) {
+                this.resizeAngle = Math.atan2(y - this.y, x - this.x);
+                let dist = Math.hypot(x - this.x, y - this.y);
+                if(snap) { dist = Math.round(dist / artGridSize) * artGridSize; if(dist < artGridSize) dist = artGridSize; }
+                else if(dist < 10) dist = 10;
+                this.r = dist;
+            }
+        }
+
+        class ArtLine extends ArtObject {
+            constructor(x1, y1, x2, y2) {
+                super(x1, y1); this.x2 = x2; this.y2 = y2; this.type = 'line';
+            }
+            draw(ctx, isSelected) {
+                ctx.beginPath(); ctx.moveTo(this.x, this.y); ctx.lineTo(this.x2, this.y2);
+                ctx.lineWidth = this.lineWidth; ctx.strokeStyle = this.color; ctx.stroke();
+                if(isSelected) { this.drawHandle(ctx, this.x, this.y); this.drawHandle(ctx, this.x2, this.y2); }
+            }
+            drawHandle(ctx, x, y) {
+                ctx.beginPath(); ctx.arc(x, y, 5, 0, Math.PI*2); ctx.fillStyle = '#fff'; ctx.fill(); ctx.strokeStyle = '#4F46E5'; ctx.lineWidth = 2; ctx.stroke();
+            }
+            contains(x, y) {
+                const d = Math.abs((this.y2-this.y)*x - (this.x2-this.x)*y + this.x2*this.y - this.y2*this.x) / Math.hypot(this.y2-this.y, this.x2-this.x);
+                if(d > 10 + this.lineWidth/2) return false;
+                const dot = (x-this.x)*(this.x2-this.x) + (y-this.y)*(this.y2-this.y);
+                const lenSq = (this.x2-this.x)**2 + (this.y2-this.y)**2;
+                return dot >= 0 && dot <= lenSq;
+            }
+            hitHandle(x, y) {
+                if(Math.hypot(x-this.x, y-this.y) < 10) return 'p1';
+                if(Math.hypot(x-this.x2, y-this.y2) < 10) return 'p2';
+                return null;
+            }
+            move(dx, dy) { super.move(dx, dy); this.x2 += dx; this.y2 += dy; }
+            resize(handle, x, y, snap) {
+                if(snap) { x = Math.round(x/artGridSize)*artGridSize; y = Math.round(y/artGridSize)*artGridSize; }
+                if(handle === 'p1') { this.x = x; this.y = y; } else { this.x2 = x; this.y2 = y; }
+            }
+        }
+
+        class ArtText extends ArtObject {
+            constructor(x, y, text) {
+                super(x, y); this.text = text; this.fontSize = 20; this.type = 'text';
+            }
+            draw(ctx, isSelected) {
+                ctx.font = `${this.fontSize}px 'Noto Sans TC'`; ctx.fillStyle = this.color; ctx.textBaseline = 'middle'; ctx.textAlign = 'center';
+                ctx.fillText(this.text, this.x, this.y);
+                if(isSelected) {
+                    const metrics = ctx.measureText(this.text);
+                    const w = metrics.width, h = this.fontSize;
+                    ctx.strokeStyle = '#4F46E5'; ctx.setLineDash([2, 2]); ctx.lineWidth=1;
+                    ctx.strokeRect(this.x - w/2 - 4, this.y - h/2 - 4, w + 8, h + 8); ctx.setLineDash([]);
+                    this.drawHandle(ctx, this.x + w/2 + 8, this.y + h/2 + 8);
+                }
+            }
+            drawHandle(ctx, x, y) { ctx.beginPath(); ctx.arc(x, y, 5, 0, Math.PI*2); ctx.fillStyle = '#4F46E5'; ctx.fill(); }
+            contains(x, y) {
+                artCtx.font = `${this.fontSize}px 'Noto Sans TC'`;
+                const w = artCtx.measureText(this.text).width, h = this.fontSize;
+                // Add slightly more generous padding for hit detection
+                const padding = 15; // Increased padding for easier click
+                return x > this.x - w/2 - padding && x < this.x + w/2 + padding && y > this.y - h/2 - padding && y < this.y + h/2 + padding;
+            }
+            hitHandle(x, y) {
+                artCtx.font = `${this.fontSize}px 'Noto Sans TC'`;
+                const w = artCtx.measureText(this.text).width, h = this.fontSize;
+                return Math.hypot(x-(this.x + w/2 + 8), y-(this.y + h/2 + 8)) < 15 ? 'resize' : null; // Increased hit area for handle
+            }
+            resize(handle, x, y, snap) {
+                const d = Math.hypot(x - this.x, y - this.y);
+                this.fontSize = Math.round(Math.max(12, d / 2));
+            }
+        }
+
+        function initArt() {
+            window.addEventListener('resize', () => { if(currentMode === 'art') resizeArtCanvas(); });
+            artCanvas.addEventListener('mousedown', handleArtStart);
+            artCanvas.addEventListener('mousemove', handleArtMove);
+            window.addEventListener('mouseup', handleArtEnd);
+            artCanvas.addEventListener('touchstart', handleArtStart, {passive: false});
+            window.addEventListener('touchmove', handleArtMove, {passive: false});
+            window.addEventListener('touchend', handleArtEnd);
+            artCanvas.addEventListener('dblclick', handleArtDblClick);
+            window.addEventListener('keydown', handleArtKey);
+
+            document.getElementById('addCircleBtn').addEventListener('click', () => addArtObject('circle'));
+            document.getElementById('addLineBtn').addEventListener('click', () => addArtObject('line'));
+            document.getElementById('addTextBtn').addEventListener('click', () => addArtObject('text'));
+            document.getElementById('deleteBtn').addEventListener('click', deleteSelected);
+            document.getElementById('copyBtn').addEventListener('click', copySelected);
+            document.getElementById('pasteBtn').addEventListener('click', pasteObject);
+            document.getElementById('clearAllBtn').addEventListener('click', () => { if(confirm('清除全部？')) { artObjects = []; selectedObjIdx = -1; drawArt(); }});
+            document.getElementById('exportBtn').addEventListener('click', exportImage);
+            
+            // Canvas Sizing
+            const sizeSelect = document.getElementById('canvasSizeSelect');
+            const customInputs = document.getElementById('customSizeInputs');
+            const applySizeBtn = document.getElementById('applySizeBtn');
+            
+            sizeSelect.addEventListener('change', (e) => {
+                const val = e.target.value;
+                if(val === 'custom') {
+                    customInputs.classList.remove('hidden');
+                    artCanvasConfig.mode = 'custom';
+                } else if (val === 'screen') {
+                    customInputs.classList.add('hidden');
+                    artCanvasConfig.mode = 'screen';
+                    resizeArtCanvas();
+                } else {
+                    customInputs.classList.add('hidden');
+                    artCanvasConfig.mode = 'preset';
+                    const [w, h] = val.split('x').map(Number);
+                    artCanvasConfig.width = w;
+                    artCanvasConfig.height = h;
+                    resizeArtCanvas();
+                }
+            });
+            
+            applySizeBtn.addEventListener('click', () => {
+                const w = parseInt(document.getElementById('customW').value);
+                const h = parseInt(document.getElementById('customH').value);
+                if(w > 0 && h > 0) {
+                    artCanvasConfig.width = w;
+                    artCanvasConfig.height = h;
+                    resizeArtCanvas();
+                }
+            });
+
+            // UI bindings
+            const strokePicker = document.getElementById('strokeColorPicker');
+            const fillPicker = document.getElementById('fillColorPicker');
+            const opacitySlider = document.getElementById('opacitySlider');
+            const noFillCheck = document.getElementById('noFillCheck');
+            const showBgGrid = document.getElementById('showBgGrid');
+            const showArtCenterCheck = document.getElementById('showArtCenter');
+            const gridSizeInput = document.getElementById('gridSizeInput');
+            const gridSizeDec = document.getElementById('gridSizeDec');
+            const gridSizeInc = document.getElementById('gridSizeInc');
+            const strokeWidthSlider = document.getElementById('strokeWidthSlider');
+
+            strokePicker.addEventListener('input', (e) => updateStyle('color', e.target.value));
+            fillPicker.addEventListener('input', (e) => updateStyle('fillColor', e.target.value));
+            opacitySlider.addEventListener('input', (e) => updateStyle('fillOpacity', e.target.value));
+            noFillCheck.addEventListener('change', (e) => {
+                fillPicker.disabled = e.target.checked;
+                opacitySlider.disabled = e.target.checked;
+                updateStyle('fillColor', e.target.checked ? 'transparent' : fillPicker.value);
+            });
+            showBgGrid.addEventListener('change', (e) => { showArtBgGrid = e.target.checked; drawArt(); });
+            showArtCenterCheck.addEventListener('change', (e) => { showArtCenter = e.target.checked; drawArt(); });
+            strokeWidthSlider.addEventListener('input', (e) => {
+                const val = parseInt(e.target.value);
+                document.getElementById('strokeWidthVal').textContent = val + 'px';
+                updateStyle('lineWidth', val);
+            });
+            
+            // Grid Size Buttons
+            const updateGridSize = (val) => {
+                let v = parseInt(val);
+                if(isNaN(v)) v = 40;
+                if(v < 10) v = 10; if(v > 100) v = 100;
+                artGridSize = v;
+                gridSizeInput.value = v;
+                drawArt();
+            };
+
+            gridSizeDec.addEventListener('click', () => updateGridSize(artGridSize - 5));
+            gridSizeInc.addEventListener('click', () => updateGridSize(artGridSize + 5));
+        }
+
+        function resizeArtCanvas() {
+            if (artCanvasConfig.mode === 'screen') {
+                artCanvas.width = artContainer.clientWidth;
+                artCanvas.height = artContainer.clientHeight;
+                artCanvas.style.width = '100%';
+                artCanvas.style.height = '100%';
+            } else {
+                // Fixed size mode
+                artCanvas.width = artCanvasConfig.width;
+                artCanvas.height = artCanvasConfig.height;
+                
+                // Calculate CSS Scaling to fit in container (Letterbox)
+                const containerW = artContainer.clientWidth - 40; // padding
+                const containerH = artContainer.clientHeight - 100; // padding
+                const aspect = artCanvas.width / artCanvas.height;
+                const containerAspect = containerW / containerH;
+                
+                if (aspect > containerAspect) {
+                    artCanvas.style.width = `${containerW}px`;
+                    artCanvas.style.height = `${containerW / aspect}px`;
+                } else {
+                    artCanvas.style.height = `${containerH}px`;
+                    artCanvas.style.width = `${containerH * aspect}px`;
+                }
+            }
+            drawArt();
+        }
+
+        function drawArt() {
+            artCtx.fillStyle = '#ffffff';
+            artCtx.fillRect(0, 0, artCanvas.width, artCanvas.height);
+            
+            if(showArtBgGrid) {
+                artCtx.beginPath();
+                artCtx.strokeStyle = '#f3f4f6';
+                artCtx.lineWidth = 1;
+                for(let x=0; x<artCanvas.width; x+=artGridSize) { artCtx.moveTo(x,0); artCtx.lineTo(x,artCanvas.height); }
+                for(let y=0; y<artCanvas.height; y+=artGridSize) { artCtx.moveTo(0,y); artCtx.lineTo(artCanvas.width,y); }
+                artCtx.stroke();
+            }
+            artObjects.forEach((o, idx) => o.draw(artCtx, idx === selectedObjIdx));
+            updateArtUI();
+        }
+
+        function addArtObject(type) {
+            // Always place in current center
+            const cx = Math.round((artCanvas.width/2)/artGridSize)*artGridSize;
+            const cy = Math.round((artCanvas.height/2)/artGridSize)*artGridSize;
+            
+            if(type === 'circle') {
+                artObjects.push(new ArtCircle(cx, cy, artGridSize*2));
+            } else if (type === 'line') {
+                artObjects.push(new ArtLine(cx - artGridSize*2, cy, cx + artGridSize*2, cy));
+            } else if (type === 'text') {
+                artObjects.push(new ArtText(cx, cy, "文字"));
+            }
+            selectObject(artObjects.length - 1);
+        }
+
+        function selectObject(idx) {
+            selectedObjIdx = idx;
+            if(idx !== -1) {
+                const o = artObjects[idx];
+                document.getElementById('strokeColorPicker').value = o.color;
+                document.getElementById('strokeWidthSlider').value = o.lineWidth || 2;
+                document.getElementById('strokeWidthVal').textContent = (o.lineWidth || 2) + 'px';
+                
+                const fillP = document.getElementById('fillColorPicker');
+                const noF = document.getElementById('noFillCheck');
+                const op = document.getElementById('opacitySlider');
+                if(o.type === 'circle') {
+                    if(o.fillColor === 'transparent') { noF.checked = true; fillP.disabled = true; op.disabled = true; }
+                    else { noF.checked = false; fillP.disabled = false; op.disabled = false; fillP.value = o.fillColor; op.value = o.fillOpacity; }
+                } else {
+                    noF.checked = true; fillP.disabled = true; op.disabled = true;
+                }
+            }
+            drawArt();
+        }
+
+        function updateStyle(prop, val) {
+            if(selectedObjIdx === -1) return;
+            const o = artObjects[selectedObjIdx];
+            if(prop === 'color') o.color = val;
+            if(prop === 'fillColor' && o.type === 'circle') o.fillColor = val;
+            if(prop === 'fillOpacity' && o.type === 'circle') o.fillOpacity = parseFloat(val);
+            if(prop === 'lineWidth' && (o.type === 'circle' || o.type === 'line')) o.lineWidth = parseInt(val);
+            drawArt();
+        }
+
+        function deleteSelected() { if(selectedObjIdx !== -1) { artObjects.splice(selectedObjIdx, 1); selectedObjIdx = -1; drawArt(); } }
+
+        function copySelected() {
+            if(selectedObjIdx !== -1) {
+                const o = artObjects[selectedObjIdx];
+                let clone;
+                if(o.type === 'circle') { clone = new ArtCircle(0, 0, o.r); clone.fillColor = o.fillColor; clone.fillOpacity = o.fillOpacity; clone.lineWidth = o.lineWidth; }
+                else if(o.type === 'line') { clone = new ArtLine(0, 0, o.x2-o.x, o.y2-o.y); clone.lineWidth = o.lineWidth; }
+                else { clone = new ArtText(0, 0, o.text); clone.fontSize = o.fontSize; }
+                clone.color = o.color;
+                artClipboard = clone;
+                updateArtUI();
+            }
+        }
+
+        function pasteObject() {
+            if(!artClipboard) return;
+            const cx = Math.round((artCanvas.width/2)/artGridSize)*artGridSize;
+            const cy = Math.round((artCanvas.height/2)/artGridSize)*artGridSize;
+            const off = Math.random()*20 - 10;
+            let newO;
+            if(artClipboard.type === 'circle') { newO = new ArtCircle(cx+off, cy+off, artClipboard.r); newO.fillColor = artClipboard.fillColor; newO.fillOpacity = artClipboard.fillOpacity; newO.lineWidth = artClipboard.lineWidth; }
+            else if(artClipboard.type === 'line') { newO = new ArtLine(cx+off, cy+off, cx+off+artClipboard.x2, cy+off+artClipboard.y2); newO.lineWidth = artClipboard.lineWidth; }
+            else { newO = new ArtText(cx+off, cy+off, artClipboard.text); newO.fontSize = artClipboard.fontSize; }
+            newO.color = artClipboard.color;
+            artObjects.push(newO);
+            selectObject(artObjects.length - 1);
+        }
+
+        function exportImage() {
+            const link = document.createElement('a');
+            link.download = 'circle-art.png';
+            const backupIdx = selectedObjIdx;
+            selectedObjIdx = -1;
+            drawArt();
+            link.href = artCanvas.toDataURL();
+            link.click();
+            selectedObjIdx = backupIdx;
+            drawArt();
+        }
+
+        function updateArtUI() {
+            const hasSel = selectedObjIdx !== -1;
+            document.getElementById('deleteBtn').disabled = !hasSel;
+            document.getElementById('copyBtn').disabled = !hasSel;
+            document.getElementById('pasteBtn').disabled = !artClipboard;
+            const o = hasSel ? artObjects[selectedObjIdx] : null;
+            document.getElementById('strokeColorPicker').disabled = !hasSel;
+            
+            // Stroke width only for shapes
+            const isShape = hasSel && (o.type === 'circle' || o.type === 'line');
+            document.getElementById('strokeWidthSlider').disabled = !isShape;
+            
+            const fillControls = ['fillColorPicker', 'opacitySlider', 'noFillCheck'];
+            const disableFill = !hasSel || (o && o.type !== 'circle');
+            fillControls.forEach(id => {
+                const el = document.getElementById(id);
+                if(id === 'noFillCheck') el.disabled = disableFill;
+                else el.disabled = disableFill || (o && o.fillColor === 'transparent');
+            });
+        }
+
+        function getArtMousePos(e) {
+            const rect = artCanvas.getBoundingClientRect();
+            // Scale mouse coordinates to match internal canvas resolution
+            const scaleX = artCanvas.width / rect.width;
+            const scaleY = artCanvas.height / rect.height;
+            const clientX = (e.touches && e.touches.length > 0) ? e.touches[0].clientX : e.clientX;
+            const clientY = (e.touches && e.touches.length > 0) ? e.touches[0].clientY : e.clientY;
+            return { x: (clientX - rect.left) * scaleX, y: (clientY - rect.top) * scaleY };
+        }
+
+        function handleArtStart(e) {
+            if(currentMode !== 'art') return;
+            const pos = getArtMousePos(e);
+            artAction = null;
+            if(selectedObjIdx !== -1) {
+                const h = artObjects[selectedObjIdx].hitHandle(pos.x, pos.y);
+                if(h) { artAction = { type: 'resize', handle: h }; e.preventDefault(); return; }
+            }
+            let hitIdx = -1;
+            for(let i=artObjects.length-1; i>=0; i--) { if(artObjects[i].contains(pos.x, pos.y)) { hitIdx = i; break; } }
+            if(hitIdx !== -1) { selectObject(hitIdx); artAction = { type: 'move' }; artDragOffset.x = pos.x - artObjects[hitIdx].x; artDragOffset.y = pos.y - artObjects[hitIdx].y; } 
+            else { selectObject(-1); }
+            drawArt();
+        }
+
+        function handleArtMove(e) {
+            if(currentMode !== 'art') return;
+            const pos = getArtMousePos(e);
+            const snap = document.getElementById('artSnap').checked;
+            let cursor = 'default';
+            if(selectedObjIdx !== -1 && artObjects[selectedObjIdx].hitHandle(pos.x, pos.y)) cursor = 'pointer';
+            else if(artObjects.some(o => o.contains(pos.x, pos.y))) cursor = 'move';
+            artCanvas.style.cursor = cursor;
+            if(!artAction || selectedObjIdx === -1) return;
+            e.preventDefault();
+            const o = artObjects[selectedObjIdx];
+            if(artAction.type === 'move') {
+                let nx = pos.x - artDragOffset.x; let ny = pos.y - artDragOffset.y;
+                if(snap) { nx = Math.round(nx/artGridSize)*artGridSize; ny = Math.round(ny/artGridSize)*artGridSize; }
+                o.move(nx - o.x, ny - o.y);
+            } else if(artAction.type === 'resize') { o.resize(artAction.handle, pos.x, pos.y, snap); }
+            drawArt();
+        }
+
+        function handleArtEnd() { if(currentMode !== 'art') return; artAction = null; }
+
+        function startInlineEdit(idx) {
+            const o = artObjects[idx];
+            if(o.type !== 'text') return;
+
+            // Calculate position for overlay input
+            const rect = artCanvas.getBoundingClientRect();
+            const scaleX = rect.width / artCanvas.width; // CSS pixels per Canvas pixel
+            const scaleY = rect.height / artCanvas.height;
+
+            const input = document.createElement('input');
+            input.type = 'text';
+            input.value = o.text;
+            
+            // Style to match canvas text
+            input.style.position = 'absolute';
+            // Convert canvas coordinates to screen coordinates relative to body
+            // Need window scroll offset if not using fixed positioning
+            const left = rect.left + window.scrollX + o.x / scaleX;
+            const top = rect.top + window.scrollY + o.y / scaleY;
+            
+            input.style.left = `${left}px`;
+            input.style.top = `${top}px`;
+            input.style.transform = 'translate(-50%, -50%)'; // Center align
+            input.style.fontSize = `${o.fontSize / scaleY}px`;
+            input.style.color = o.color;
+            input.style.fontFamily = "'Noto Sans TC', sans-serif";
+            input.style.textAlign = 'center';
+            input.style.background = 'rgba(255, 255, 255, 0.8)';
+            input.style.border = '1px dashed #4F46E5';
+            input.style.outline = 'none';
+            input.style.padding = '2px 4px';
+            input.style.minWidth = '50px';
+            input.style.zIndex = '1000';
+
+            document.body.appendChild(input);
+            input.focus();
+            input.select();
+
+            let isFinishing = false; // Add flag
+            const finish = () => {
+                if (isFinishing) return; // Prevent double execution
+                isFinishing = true;
+                if(input.parentNode) {
+                    if(input.value.trim() !== "") {
+                        o.text = input.value;
+                    }
+                    document.body.removeChild(input);
+                    drawArt();
+                }
+            };
+
+            input.addEventListener('blur', finish);
+            input.addEventListener('keydown', (e) => {
+                if(e.key === 'Enter') {
+                    e.preventDefault(); // Prevent default enter behavior
+                    finish();
+                }
+            });
+        }
+
+        function handleArtDblClick(e) {
+            if(currentMode !== 'art') return;
+            const pos = getArtMousePos(e);
+            let foundIdx = -1;
+            // Reverse search to find top-most
+            for (let i = artObjects.length - 1; i >= 0; i--) {
+                const o = artObjects[i];
+                if (o.type === 'text' && o.contains(pos.x, pos.y)) {
+                    foundIdx = i;
+                    break;
+                }
+            }
+            if(foundIdx !== -1) {
+                startInlineEdit(foundIdx);
+            }
+        }
+
+        function handleArtKey(e) {
+            if(currentMode !== 'art') return;
+            if (e.target.tagName === 'INPUT') return; 
+            
+            // Enter to edit text
+            if (e.key === 'Enter' && selectedObjIdx !== -1 && artObjects[selectedObjIdx].type === 'text') {
+                e.preventDefault();
+                startInlineEdit(selectedObjIdx);
+                return;
+            }
+
+            if ((e.ctrlKey || e.metaKey) && (e.key === 'c' || e.key === 'C')) { copySelected(); e.preventDefault(); }
+            else if ((e.ctrlKey || e.metaKey) && (e.key === 'v' || e.key === 'V')) { pasteObject(); e.preventDefault(); }
+            else if (e.key === 'Delete' || e.key === 'Backspace') { deleteSelected(); e.preventDefault(); }
+            else if (selectedObjIdx !== -1 && ['ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.key)) {
+                e.preventDefault();
+                const step = e.shiftKey ? 10 : 1;
+                const dx = (e.key==='ArrowLeft'?-step : e.key==='ArrowRight'?step : 0);
+                const dy = (e.key==='ArrowUp'?-step : e.key==='ArrowDown'?step : 0);
+                artObjects[selectedObjIdx].move(dx, dy);
+                drawArt();
+            }
+        }
+
+        initGeo();
+        initArt();
+
+    </script>
+</body>
+</html>
