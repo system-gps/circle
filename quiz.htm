@@ -1,0 +1,804 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>小學五年級數學：圓的認識與計算</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        body { 
+            font-family: 'Noto Sans TC', sans-serif; 
+            background: linear-gradient(135deg, #f0f9ff 0%, #e0e7ff 100%);
+            min-height: 100vh;
+            color: #334155;
+        }
+        /* Optimized text sizes */
+        h1 { letter-spacing: -0.025em; }
+        .difficulty-badge { font-size: 0.7rem; padding: 0.1rem 0.4rem; border-radius: 9999px; font-weight: bold; }
+        .diff-easy { background-color: #dcfce7; color: #166534; }
+        .diff-medium { background-color: #fef9c3; color: #854d0e; }
+        .diff-hard { background-color: #fee2e2; color: #991b1b; }
+        .category-tag { font-size: 0.7rem; padding: 0.1rem 0.4rem; border-radius: 4px; background-color: #e0e7ff; color: #3730a3; margin-right: 0.4rem; font-weight: 600; }
+        
+        .option-label { transition: all 0.15s ease-in-out; border-width: 1px; }
+        .option-label:hover { background-color: #f8fafc; border-color: #93c5fd; transform: translateY(-1px); box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+        input:checked + span { font-weight: bold; color: #2563eb; }
+        label:has(input:checked) { border-color: #3b82f6; background-color: #eff6ff; ring: 1px solid #3b82f6; }
+
+        .fade-in { animation: fadeIn 0.4s ease-out forwards; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+        #progress-bar { transition: width 0.4s ease-out; }
+        
+        .card-shadow { box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06); }
+        .dash-card { background: white; border-radius: 0.75rem; box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1); padding: 1.25rem; border: 1px solid #e2e8f0; }
+        
+        .modal-overlay { background-color: rgba(15, 23, 42, 0.6); backdrop-filter: blur(2px); }
+        .loader { border: 2px solid #f3f3f3; border-radius: 50%; border-top: 2px solid #3b82f6; width: 16px; height: 16px; animation: spin 0.8s linear infinite; display: inline-block; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        
+        /* Table Styles */
+        .table-header { @apply bg-slate-50 text-slate-500 text-xs font-bold uppercase tracking-wider border-b border-slate-200; }
+        .table-row { @apply border-b border-slate-100 hover:bg-slate-50 transition-colors duration-150; }
+        .table-cell { @apply p-3 text-sm; }
+    </style>
+</head>
+<body class="flex flex-col antialiased">
+
+    <div class="max-w-5xl mx-auto w-full p-4 flex-grow">
+        <!-- Header -->
+        <header class="text-center mb-6 relative pt-2">
+            <div class="inline-block bg-blue-100 text-blue-700 px-3 py-0.5 rounded-full text-xs font-bold mb-2 tracking-wide">小學數學互動評量</div>
+            <h1 class="text-3xl font-extrabold text-slate-800 mb-1">圓形大挑戰</h1>
+            <p class="text-base text-slate-500 font-medium">五年級數學 • 共 12 題</p>
+            <button onclick="toggleLoginModal()" class="absolute top-2 right-2 text-xs text-slate-400 hover:text-blue-600 transition-colors flex items-center font-bold px-2 py-1 rounded hover:bg-white/50">
+                <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>
+                教師專區
+            </button>
+        </header>
+
+        <!-- Intro Screen -->
+        <div id="intro-screen" class="bg-white rounded-2xl card-shadow p-8 text-center fade-in relative max-w-2xl mx-auto border border-white">
+            <div class="mb-6 flex justify-center">
+                <div class="p-4 bg-blue-50 rounded-full">
+                    <svg width="80" height="80" viewBox="0 0 100 100">
+                        <circle cx="50" cy="50" r="45" fill="#dbeafe" stroke="#2563eb" stroke-width="2.5"/>
+                        <circle cx="50" cy="50" r="3" fill="#ef4444"/>
+                        <line x1="50" y1="50" x2="95" y2="50" stroke="#ef4444" stroke-width="2"/>
+                        <text x="65" y="45" font-size="14" fill="#ef4444" font-weight="bold">r</text>
+                    </svg>
+                </div>
+            </div>
+            
+            <!-- Student Info Selection -->
+            <div class="bg-slate-50 p-6 rounded-xl border border-slate-200 text-left mb-6">
+                <h3 class="text-base font-bold text-slate-700 mb-4 flex items-center border-b border-slate-200 pb-2">
+                    <span class="bg-blue-600 text-white w-5 h-5 rounded-full flex items-center justify-center text-xs mr-2">1</span>
+                    請輸入測驗資料
+                </h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-500 mb-1 uppercase">場次代碼</label>
+                        <!-- Added inputmode="numeric", pattern="[0-9]*", and oninput regex filter -->
+                        <input type="text" inputmode="numeric" pattern="[0-9]*" id="session-code-input" maxlength="6" placeholder="輸入6位數代碼" class="w-full p-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none bg-white text-center tracking-widest text-lg font-bold text-slate-700" oninput="this.value = this.value.replace(/[^0-9]/g, '')">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-500 mb-1 uppercase">學號</label>
+                        <div class="relative">
+                            <select id="student-id" class="w-full p-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-white appearance-none text-slate-700 font-medium">
+                                <option value="">請選擇</option>
+                                <!-- Options generated by JS -->
+                            </select>
+                            <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-500">
+                                <svg class="fill-current h-4 w-4" viewBox="0 0 20 20"><path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/></svg>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="mb-2">
+                    <label class="block text-xs font-bold text-slate-500 mb-1 uppercase">姓名 <span class="text-slate-400 font-normal lowercase">(選填)</span></label>
+                    <input type="text" id="student-name" placeholder="請輸入姓名" class="w-full p-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-white text-slate-700">
+                </div>
+                <p id="code-status-msg" class="text-xs mt-2 text-red-500 font-bold h-4 flex items-center"></p>
+            </div>
+            
+            <div class="block">
+                <button onclick="validateAndStart()" id="start-btn" class="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold py-3 px-10 rounded-full text-lg shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 active:translate-y-0 transition-all w-full md:w-auto">
+                    開始測驗
+                </button>
+            </div>
+        </div>
+
+        <!-- Login Modal -->
+        <div id="login-modal" class="hidden fixed inset-0 modal-overlay flex items-center justify-center z-50 p-4">
+            <div class="bg-white p-6 rounded-2xl shadow-2xl max-w-xs w-full transform scale-100 transition-transform">
+                <h3 class="text-xl font-bold mb-4 text-slate-800 text-center">教師登入</h3>
+                <input type="password" id="teacher-pwd" placeholder="密碼" class="w-full p-3 border border-slate-300 rounded-lg mb-4 text-center" onkeyup="if(event.key === 'Enter') checkTeacherLogin()">
+                <div class="flex gap-2">
+                    <button onclick="toggleLoginModal()" class="flex-1 py-2 text-slate-600 hover:bg-slate-100 rounded-lg text-sm font-bold">取消</button>
+                    <button onclick="checkTeacherLogin()" class="flex-1 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-bold shadow">登入</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Big Screen Modal -->
+        <div id="big-screen-modal" class="hidden fixed inset-0 z-[60] bg-slate-900 flex items-center justify-center p-4">
+            <button onclick="document.getElementById('big-screen-modal').classList.add('hidden')" class="absolute top-4 right-4 text-white/50 hover:text-white p-2">
+                <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+            </button>
+            <div class="text-center w-full max-w-4xl">
+                <div class="text-blue-300 text-2xl md:text-3xl font-medium mb-6 tracking-wider" id="big-screen-name">測驗場次</div>
+                <div class="bg-white rounded-3xl p-8 md:p-16 shadow-[0_0_60px_rgba(59,130,246,0.3)] inline-block w-full">
+                    <div class="text-slate-400 text-lg font-bold mb-2 uppercase tracking-[0.2em]">Code</div>
+                    <div id="big-screen-code" class="text-[4rem] md:text-[8rem] font-black text-slate-800 tracking-widest leading-none font-mono"></div>
+                </div>
+                <div class="mt-8 text-white/70 text-lg">請輸入此代碼進入測驗</div>
+            </div>
+        </div>
+
+        <!-- Loading Overlay -->
+        <div id="loading-overlay" class="hidden fixed inset-0 z-[70] bg-white/80 flex flex-col items-center justify-center backdrop-blur-sm">
+            <div class="loader w-10 h-10 border-4 border-t-blue-600 mb-4"></div>
+            <p class="text-slate-600 font-bold animate-pulse">正在讀取資料...</p>
+        </div>
+
+        <!-- Teacher Dashboard -->
+        <div id="teacher-dashboard" class="hidden bg-slate-50 min-h-screen absolute top-0 left-0 w-full z-10 text-sm">
+            <!-- Navbar -->
+            <div class="bg-white shadow-sm border-b border-slate-200 sticky top-0 z-20">
+                <div class="max-w-6xl mx-auto px-4 h-14 flex justify-between items-center">
+                    <h2 class="text-lg font-bold text-slate-800 flex items-center">
+                        <span class="bg-indigo-600 text-white p-1 rounded mr-2"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg></span>
+                        教師管理系統
+                    </h2>
+                    <div class="flex items-center gap-3">
+                        <button onclick="fetchSheetData(true)" class="text-blue-600 hover:text-blue-800 text-xs flex items-center bg-blue-50 px-3 py-1.5 rounded-md font-bold transition hover:bg-blue-100">
+                            <span id="refresh-icon" class="mr-1">↻</span> 重整
+                        </button>
+                        <button onclick="logoutTeacher()" class="text-slate-500 hover:text-red-600 text-xs font-bold px-2 py-1 transition">登出</button>
+                    </div>
+                </div>
+                <div class="max-w-6xl mx-auto px-4 flex gap-6">
+                    <button onclick="switchTab('report')" id="tab-btn-report" class="text-sm font-bold text-blue-600 border-b-2 border-blue-600 py-2.5 px-1 transition-colors">成績報告</button>
+                    <button onclick="switchTab('session')" id="tab-btn-session" class="text-sm font-bold text-slate-500 hover:text-blue-600 py-2.5 px-1 transition-colors">場次設定</button>
+                </div>
+            </div>
+
+            <div class="max-w-6xl mx-auto p-4 md:p-6">
+                <!-- SESSION TAB -->
+                <div id="tab-session" class="hidden fade-in">
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <div class="dash-card md:col-span-1 h-fit">
+                            <h3 class="text-base font-bold mb-3 text-slate-800">建立新場次</h3>
+                            <div class="space-y-3">
+                                <div>
+                                    <label class="block text-xs text-slate-500 font-bold mb-1">場次名稱</label>
+                                    <input type="text" id="new-session-name" class="w-full p-2.5 border border-slate-200 rounded-lg text-sm focus:ring-1 focus:ring-green-500 outline-none" placeholder="例如: 5A 隨堂考">
+                                </div>
+                                <button onclick="createSession()" id="create-session-btn" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-2.5 px-4 rounded-lg shadow-sm transition">生成代碼</button>
+                                <div id="created-code-display" class="hidden bg-green-50 p-3 rounded-lg border border-green-100 mt-2 flex justify-between items-center">
+                                    <div>
+                                        <div class="text-[10px] text-green-700 font-bold uppercase">Code</div>
+                                        <span id="new-session-code" class="text-2xl font-black text-slate-800 tracking-widest font-mono"></span>
+                                    </div>
+                                    <button onclick="copySessionCode()" class="text-green-600 bg-white p-1.5 rounded border border-green-100 shadow-sm hover:text-green-800"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"></path></svg></button>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="dash-card md:col-span-2">
+                            <h3 class="text-base font-bold mb-3 text-slate-800">所有場次列表</h3>
+                            <div class="overflow-y-auto max-h-[400px]">
+                                <table class="w-full text-left border-collapse">
+                                    <thead class="bg-slate-50 text-slate-500 text-[10px] uppercase font-bold sticky top-0 z-10">
+                                        <tr><th class="p-2.5">名稱</th><th class="p-2.5">代碼</th><th class="p-2.5">時間</th><th class="p-2.5 text-right">操作</th></tr>
+                                    </thead>
+                                    <tbody id="session-list-body" class="text-sm text-slate-700 divide-y divide-slate-100"></tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- REPORT TAB -->
+                <div id="tab-report" class="fade-in">
+                    <div class="mb-6 flex items-center bg-white p-3 rounded-lg border border-slate-200 shadow-sm w-fit">
+                        <label class="text-xs font-bold text-slate-500 mr-3 uppercase">檢視場次</label>
+                        <select id="dashboard-class-select" onchange="renderDashboard()" class="py-1.5 px-3 border border-slate-300 rounded-md text-sm focus:ring-2 focus:ring-blue-500 outline-none bg-slate-50 font-medium min-w-[180px]">
+                            <option value="">載入中...</option>
+                        </select>
+                    </div>
+
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+                        <div class="dash-card p-4 text-center border-t-4 border-t-blue-500"><div class="text-slate-400 text-[10px] font-bold uppercase mb-1">人數</div><div id="stat-count" class="text-2xl font-black text-slate-800">-</div></div>
+                        <div class="dash-card p-4 text-center border-t-4 border-t-green-500"><div class="text-slate-400 text-[10px] font-bold uppercase mb-1">平均分</div><div id="stat-avg" class="text-2xl font-black text-green-600">-</div></div>
+                        <div class="dash-card p-4 text-center border-t-4 border-t-purple-500"><div class="text-slate-400 text-[10px] font-bold uppercase mb-1">最高分</div><div id="stat-max" class="text-2xl font-black text-purple-600">-</div></div>
+                        <div class="dash-card p-4 text-center border-t-4 border-t-orange-500"><div class="text-slate-400 text-[10px] font-bold uppercase mb-1">及格率</div><div id="stat-pass" class="text-2xl font-black text-orange-600">-</div></div>
+                    </div>
+
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        <div class="dash-card h-fit">
+                            <h3 class="text-base font-bold mb-3 text-slate-800 flex justify-between">
+                                題目表現分析 <span class="text-[10px] font-normal text-slate-400 bg-slate-100 px-2 py-0.5 rounded">點擊長條查看</span>
+                            </h3>
+                            <div id="question-analysis" class="space-y-2 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
+                                <p class="text-slate-400 text-center py-8 italic text-xs">請選擇場次</p>
+                            </div>
+                        </div>
+                        <div class="dash-card h-fit">
+                            <h3 class="text-base font-bold mb-3 text-slate-800">個別學生成績</h3>
+                            <div class="overflow-x-auto max-h-[400px]">
+                                <table class="w-full text-left border-collapse">
+                                    <thead class="bg-slate-50 text-slate-500 text-[10px] uppercase font-bold sticky top-0">
+                                        <tr><th class="p-2.5">學號</th><th class="p-2.5">姓名</th><th class="p-2.5">分數</th><th class="p-2.5 text-right">詳情</th></tr>
+                                    </thead>
+                                    <tbody id="student-list-body" class="text-sm text-slate-700 divide-y divide-slate-100"></tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Question Modal -->
+        <div id="question-modal" class="hidden fixed inset-0 modal-overlay flex items-center justify-center z-50 p-4">
+            <div class="bg-white p-6 rounded-xl shadow-2xl max-w-xl w-full max-h-[85vh] overflow-y-auto">
+                <div class="flex justify-between mb-4">
+                    <h3 class="text-lg font-bold text-slate-800">題目詳情</h3>
+                    <button onclick="document.getElementById('question-modal').classList.add('hidden')" class="text-slate-400 hover:text-red-500 font-bold">✕</button>
+                </div>
+                <div id="question-modal-content"></div>
+            </div>
+        </div>
+
+        <!-- Student Details Modal -->
+        <div id="student-modal" class="hidden fixed inset-0 modal-overlay flex items-center justify-center z-50 p-4">
+            <div class="bg-white p-6 rounded-xl shadow-2xl max-w-3xl w-full max-h-[85vh] overflow-y-auto">
+                <div class="flex justify-between mb-4 border-b border-slate-100 pb-2">
+                    <h3 class="text-lg font-bold text-slate-800">試卷詳情</h3>
+                    <button onclick="document.getElementById('student-modal').classList.add('hidden')" class="text-slate-400 hover:text-red-500 font-bold px-2">✕</button>
+                </div>
+                <div id="student-modal-content"></div>
+            </div>
+        </div>
+
+        <!-- Quiz Container -->
+        <div id="quiz-container" class="hidden w-full max-w-3xl mx-auto">
+            <div class="mb-6">
+                <div class="flex justify-between items-end mb-2">
+                    <div>
+                        <span id="display-student-info" class="text-xs font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded mb-1 inline-block"></span>
+                        <div id="progress-text" class="text-base font-bold text-slate-700">第 1 / 12 題</div>
+                    </div>
+                    <span id="progress-percent" class="text-lg font-black text-blue-600">0%</span>
+                </div>
+                <div class="w-full bg-slate-200 rounded-full h-2.5 overflow-hidden">
+                    <div id="progress-bar" class="bg-blue-600 h-2.5 rounded-full" style="width: 0%"></div>
+                </div>
+            </div>
+            <form id="quiz-form" onsubmit="return false;">
+                <div id="question-card-container"></div>
+                <div class="mt-8 flex justify-between items-center gap-3">
+                    <button type="button" id="prev-btn" onclick="prevQuestion()" class="hidden px-5 py-2.5 rounded-lg border border-slate-300 text-slate-600 hover:bg-slate-50 font-bold text-sm">上一題</button>
+                    <button type="button" id="next-btn" onclick="nextQuestion()" class="px-6 py-2.5 rounded-lg bg-blue-600 text-white hover:bg-blue-700 font-bold text-sm shadow-md ml-auto flex items-center">
+                        下一題 <svg class="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+                    </button>
+                    <button type="button" id="submit-btn" onclick="submitQuiz()" class="hidden px-6 py-2.5 rounded-lg bg-green-600 text-white hover:bg-green-700 font-bold text-sm shadow-md ml-auto">提交試卷</button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Results -->
+        <div id="results-container" class="hidden fade-in w-full max-w-3xl mx-auto mt-4">
+            <div class="bg-white rounded-2xl card-shadow overflow-hidden border border-slate-100">
+                <div class="bg-gradient-to-r from-blue-600 to-indigo-700 p-8 text-white text-center">
+                    <h2 class="text-2xl font-bold mb-1">測驗結果</h2>
+                    <div class="text-blue-100 text-sm mb-4"><span id="result-student-info"></span></div>
+                    <div id="total-score" class="text-6xl font-black my-2 drop-shadow-md">-- / 100</div>
+                    <p id="feedback-message" class="text-lg font-bold mt-2 opacity-90">分析中...</p>
+                    <div id="upload-status" class="text-xs mt-3 text-blue-200 bg-white/10 inline-block px-3 py-1 rounded-full">成績上傳中...</div>
+                </div>
+                <div class="p-6">
+                    <div class="grid grid-cols-3 gap-4 mb-8 text-center">
+                        <div class="bg-slate-50 p-3 rounded-xl border border-slate-100"><div class="text-[10px] font-bold text-slate-400 uppercase">概念</div><div id="score-concept" class="text-2xl font-black text-blue-600">--</div></div>
+                        <div class="bg-slate-50 p-3 rounded-xl border border-slate-100"><div class="text-[10px] font-bold text-slate-400 uppercase">計算</div><div id="score-calc" class="text-2xl font-black text-green-600">--</div></div>
+                        <div class="bg-slate-50 p-3 rounded-xl border border-slate-100"><div class="text-[10px] font-bold text-slate-400 uppercase">圖形</div><div id="score-identify" class="text-2xl font-black text-purple-600">--</div></div>
+                    </div>
+                    <h3 class="text-base font-bold mb-4 border-b pb-2 text-slate-700">詳細檢討</h3>
+                    <div id="review-list" class="space-y-3"></div>
+                    <div class="mt-8 text-center">
+                        <button onclick="location.reload()" class="bg-slate-700 hover:bg-slate-800 text-white font-bold py-2.5 px-8 text-base rounded-lg shadow-md transition">重新測驗</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const GOOGLE_SCRIPT_URL = 'https://script.google.com/a/macros/grandmont.edu.hk/s/AKfycbxiEp7co1g4IT9fsXlkLn2VGQ70zX-yO_Z5CW1BqNLYxlExRY2XiEY6lNVszb3RXxzRVA/exec'; 
+
+        const questions = [
+            { id: 1, category: 'concept', catName: '定義與概念', difficulty: 'easy', label: '淺', type: 'mc', question: '在一個圓形中，所有的半徑長度是否都相等？', options: ['是', '否', '不一定'], answer: '是', svg: null },
+            { id: 2, category: 'concept', catName: '定義與概念', difficulty: 'medium', label: '中', type: 'mc', question: '以下哪一項關於「直徑」的描述是正確的？', options: ['直徑不一定通過圓心', '直徑是圓內最長的直線', '直徑的長度是半徑的一半', '圓周上任意兩點的連線就是直徑'], answer: '直徑是圓內最長的直線', svg: null },
+            { id: 3, category: 'concept', catName: '定義與概念', difficulty: 'medium', label: '中', type: 'mc', question: '請問下圖中，紅色線段代表圓的什麼部分？', options: ['圓周', '半徑', '直徑', '圓心'], answer: '半徑', svg: `<svg width="120" height="120" viewBox="0 0 100 100" class="mx-auto my-2"><circle cx="50" cy="50" r="40" fill="none" stroke="#333" stroke-width="2"/><circle cx="50" cy="50" r="3" fill="#333"/><line x1="50" y1="50" x2="90" y2="50" stroke="#ef4444" stroke-width="3"/></svg>` },
+            { id: 4, category: 'concept', catName: '定義與概念', difficulty: 'hard', label: '深', type: 'mc', question: '若一條直線通過圓心，且兩端點都在圓周上，這條直線稱為什麼？', options: ['半徑', '弧', '直徑', '圓周'], answer: '直徑', svg: null },
+            { id: 5, category: 'concept', catName: '定義與概念', difficulty: 'hard', label: '深', type: 'checkbox', question: '關於圓形的特徵，請選出所有「正確」的敘述。（可複選）', options: ['圓形有無限多條直徑', '直徑的長度是半徑的兩倍', '圓形只有一條對稱軸', '圓心到圓周上任一點的距離都相等'], answer: ['圓形有無限多條直徑', '直徑的長度是半徑的兩倍', '圓心到圓周上任一點的距離都相等'], svg: null },
+            { id: 6, category: 'calc', catName: '計算應用', difficulty: 'easy', label: '淺', type: 'fill', question: '如下圖，若圓的半徑是 5 公分，請問直徑是多少公分？(請輸入數字)', answer: '10', svg: `<svg width="120" height="120" viewBox="0 0 100 100" class="mx-auto my-2"><circle cx="50" cy="50" r="40" fill="#f0f9ff" stroke="#333" stroke-width="2"/><line x1="50" y1="50" x2="85" y2="70" stroke="#ef4444" stroke-width="2"/><text x="60" y="55" font-size="12" fill="#ef4444">5cm</text><circle cx="50" cy="50" r="2" fill="black"/></svg>` },
+            { id: 7, category: 'calc', catName: '計算應用', difficulty: 'medium', label: '中', type: 'fill', question: '如果一個圓形時鐘的直徑是 30 公分，它的半徑是多少公分？(請輸入數字)', answer: '15', svg: null },
+            { id: 8, category: 'calc', catName: '計算應用', difficulty: 'medium', label: '中', type: 'mc', question: '甲圓的半徑是 4cm，乙圓的直徑是 6cm，請問哪一個圓比較大？', options: ['甲圓', '乙圓', '一樣大'], answer: '甲圓', svg: null },
+            { id: 9, category: 'calc', catName: '計算應用', difficulty: 'hard', label: '深', type: 'fill', question: '將 3 個相同的圓形硬幣如下圖排列，若總長度為 12 公分，請問一個硬幣的半徑是多少公分？(請輸入數字)', answer: '2', svg: `<svg width="180" height="70" viewBox="0 0 200 80" class="mx-auto my-2"><circle cx="35" cy="40" r="30" fill="#fbbf24" stroke="#d97706" stroke-width="2"/><circle cx="95" cy="40" r="30" fill="#fbbf24" stroke="#d97706" stroke-width="2"/><circle cx="155" cy="40" r="30" fill="#fbbf24" stroke="#d97706" stroke-width="2"/><line x1="5" y1="75" x2="185" y2="75" stroke="black" stroke-width="1"/><line x1="5" y1="70" x2="5" y2="80" stroke="black" stroke-width="1"/><line x1="185" y1="70" x2="185" y2="80" stroke="black" stroke-width="1"/><text x="85" y="90" font-size="12">總長度 12 cm</text></svg>` },
+            { id: 10, category: 'calc', catName: '計算應用', difficulty: 'medium', label: '中', type: 'fill', question: '大圓的直徑是 20 公分，小圓的半徑是 6 公分，請問大圓的半徑比小圓的半徑長多少公分？(請輸入數字)', answer: '4', svg: null },
+            { id: 11, category: 'identify', catName: '圖形辨識', difficulty: 'easy', label: '淺', type: 'checkbox', question: '請問下列哪一個圖形是真正的圓形？', options: ['圖形 A', '圖形 B', '圖形 C', '圖形 D'], answer: ['圖形 C'], svg: `<div class="grid grid-cols-2 gap-4 my-2 justify-items-center"><div class="text-center"><svg width="60" height="60" viewBox="0 0 100 100"><path d="M 90,50 A 40,40 0 1,1 85,35" fill="none" stroke="#333" stroke-width="3" stroke-linecap="round"/></svg><div class="text-sm font-bold mt-1 text-blue-600">A</div></div><div class="text-center"><svg width="60" height="60" viewBox="0 0 100 100"><ellipse cx="50" cy="50" rx="30" ry="45" fill="none" stroke="#333" stroke-width="3"/></svg><div class="text-sm font-bold mt-1 text-blue-600">B</div></div><div class="text-center"><svg width="60" height="60" viewBox="0 0 100 100"><circle cx="50" cy="50" r="40" fill="none" stroke="#333" stroke-width="3"/></svg><div class="text-sm font-bold mt-1 text-blue-600">C</div></div><div class="text-center"><svg width="60" height="60" viewBox="0 0 100 100"><path d="M 10,50 A 40,40 0 0,1 90,50 Z" fill="none" stroke="#333" stroke-width="3"/></svg><div class="text-sm font-bold mt-1 text-blue-600">D</div></div></div>` },
+            { id: 12, category: 'identify', catName: '圖形辨識', difficulty: 'medium', label: '中', type: 'fill', question: '請仔細觀察下圖，數一數這個特別的圖案共有多少個「圓形」？(請輸入數字)', answer: '4', svg: `<svg width="120" height="120" viewBox="0 0 100 100" class="mx-auto my-2"><ellipse cx="25" cy="25" rx="12" ry="8" fill="#9ca3af" stroke="#4b5563" stroke-width="2" transform="rotate(-30, 25, 25)"/><ellipse cx="75" cy="25" rx="12" ry="8" fill="#9ca3af" stroke="#4b5563" stroke-width="2" transform="rotate(30, 75, 25)"/><circle cx="50" cy="55" r="35" fill="#e5e7eb" stroke="#4b5563" stroke-width="2"/><circle cx="40" cy="50" r="4" fill="#1f2937"/><circle cx="60" cy="50" r="4" fill="#1f2937"/><circle cx="50" cy="65" r="5" fill="#ef4444"/></svg>` }
+        ];
+
+        let currentStep = 0;
+        let studentData = { sessionName: '', id: '', name: '' };
+        let allSheetData = { scores: [], sessions: [] }; 
+        let currentFilteredScores = []; 
+
+        window.onload = function() {
+            const idSelect = document.getElementById('student-id');
+            for (let i = 1; i <= 33; i++) {
+                const option = document.createElement('option');
+                option.value = i;
+                option.text = i;
+                idSelect.add(option);
+            }
+            document.getElementById('new-session-name').addEventListener('input', function() {
+                document.getElementById('created-code-display').classList.add('hidden');
+                document.getElementById('create-session-btn').innerText = "生成代碼";
+            });
+        };
+
+        // --- Teacher Logic ---
+        function toggleLoginModal() {
+            document.getElementById('login-modal').classList.toggle('hidden');
+            document.getElementById('teacher-pwd').value = '';
+        }
+
+        function checkTeacherLogin() {
+            const pwd = document.getElementById('teacher-pwd').value;
+            if (pwd === 'grandmont') {
+                toggleLoginModal();
+                document.getElementById('teacher-dashboard').classList.remove('hidden');
+                document.body.style.overflow = 'hidden';
+                // CACHE LOGIC: Check if we have recent data (5 mins)
+                const cached = localStorage.getItem('circle_quiz_data');
+                const cachedTime = localStorage.getItem('circle_quiz_time');
+                const now = new Date().getTime();
+                
+                if (cached && cachedTime && (now - cachedTime < 300000)) { // 5 minutes
+                    console.log("Using cached data");
+                    allSheetData = JSON.parse(cached);
+                    renderDashboard();
+                } else {
+                    fetchSheetData();
+                }
+            } else { alert('密碼錯誤！'); }
+        }
+        function logoutTeacher() {
+            document.getElementById('teacher-dashboard').classList.add('hidden');
+            document.body.style.overflow = 'auto';
+        }
+
+        function switchTab(tab) {
+            document.getElementById('tab-session').classList.add('hidden');
+            document.getElementById('tab-report').classList.add('hidden');
+            document.getElementById(`tab-${tab}`).classList.remove('hidden');
+            
+            const btnClass = "text-base font-bold text-slate-500 hover:text-blue-600 px-4 py-2 whitespace-nowrap transition";
+            const activeClass = "text-base font-bold text-blue-600 border-b-2 border-blue-600 px-4 py-2 whitespace-nowrap transition";
+            
+            document.getElementById('tab-btn-session').className = btnClass;
+            document.getElementById('tab-btn-report').className = btnClass;
+            document.getElementById(`tab-btn-${tab}`).className = activeClass;
+        }
+
+        function fetchSheetData(force = false) {
+            if (!GOOGLE_SCRIPT_URL) { generateMockData(); renderDashboard(); return; }
+            
+            // Show overlay
+            const overlay = document.getElementById('loading-overlay');
+            overlay.classList.remove('hidden');
+
+            fetch(GOOGLE_SCRIPT_URL)
+            .then(r => r.json())
+            .then(data => {
+                allSheetData = data;
+                // Save cache
+                localStorage.setItem('circle_quiz_data', JSON.stringify(data));
+                localStorage.setItem('circle_quiz_time', new Date().getTime());
+                
+                renderDashboard();
+                overlay.classList.add('hidden');
+            })
+            .catch(e => {
+                console.error(e);
+                overlay.classList.add('hidden');
+                alert("讀取資料失敗，請檢查網路。");
+            });
+        }
+
+        function createSession() {
+            const nameInput = document.getElementById('new-session-name');
+            const name = nameInput.value.trim();
+            if(!name) { alert("請輸入場次名稱"); return; }
+            const code = Math.floor(100000 + Math.random() * 900000).toString();
+            document.getElementById('create-session-btn').innerText = "建立中...";
+            
+            if (!GOOGLE_SCRIPT_URL) {
+                allSheetData.sessions.push({name: name, code: code, timestamp: new Date()});
+                finishCreate(code);
+                return;
+            }
+
+            fetch(GOOGLE_SCRIPT_URL, {
+                method: 'POST', mode: 'no-cors',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ action: 'create_session', name: name, code: code })
+            }).then(() => {
+                setTimeout(() => { fetchSheetData(true); finishCreate(code); }, 1500);
+            });
+        }
+
+        function finishCreate(code) {
+            document.getElementById('create-session-btn').innerText = "生成代碼 (完成)";
+            document.getElementById('created-code-display').classList.remove('hidden');
+            document.getElementById('new-session-code').innerText = code;
+            renderDashboard();
+        }
+
+        function copySessionCode() {
+            copyCode(document.getElementById('new-session-code').innerText);
+        }
+
+        function copyCode(codeText) {
+            if(!codeText) return;
+            const textArea = document.createElement("textarea");
+            textArea.value = codeText;
+            document.body.appendChild(textArea);
+            textArea.select();
+            try { document.execCommand('copy'); alert('代碼 ' + codeText + ' 已複製！'); } catch (err) { alert('複製失敗'); }
+            document.body.removeChild(textArea);
+        }
+
+        function showBigScreen(name, code) {
+            document.getElementById('big-screen-name').innerText = name;
+            document.getElementById('big-screen-code').innerText = code;
+            document.getElementById('big-screen-modal').classList.remove('hidden');
+        }
+
+        function renderDashboard() {
+            const sessionListEl = document.getElementById('session-list-body');
+            if (allSheetData.sessions && allSheetData.sessions.length > 0) {
+                sessionListEl.innerHTML = allSheetData.sessions.map(s => `
+                    <tr class="table-row">
+                        <td class="table-cell font-bold text-slate-700">${s.name}</td>
+                        <td class="table-cell font-mono font-bold text-blue-600">${s.code}</td>
+                        <td class="table-cell text-slate-400 text-xs">${new Date(s.timestamp).toLocaleDateString()}</td>
+                        <td class="table-cell text-right">
+                            <button onclick="showBigScreen('${s.name}', '${s.code}')" class="text-blue-500 hover:bg-blue-50 p-1.5 rounded transition" title="放大"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7"></path></svg></button>
+                            <button onclick="copyCode('${s.code}')" class="text-slate-400 hover:bg-slate-100 p-1.5 rounded transition" title="複製"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg></button>
+                        </td>
+                    </tr>`).join('');
+            } else {
+                sessionListEl.innerHTML = '<tr><td colspan="4" class="p-6 text-center text-slate-400 italic">尚無場次</td></tr>';
+            }
+
+            const select = document.getElementById('dashboard-class-select');
+            const currentVal = select.value;
+            if (allSheetData.sessions && allSheetData.sessions.length > 0) {
+                select.innerHTML = '<option value="">請選擇場次</option>' + allSheetData.sessions.map(s => `<option value="${s.name}">${s.name}</option>`).join('');
+            } else {
+                select.innerHTML = '<option value="">無場次資料</option>';
+            }
+            if(currentVal) select.value = currentVal;
+
+            const selectedSession = select.value;
+            if(!selectedSession) { clearStats(); return; }
+
+            const classData = allSheetData.scores.filter(d => d.sessionName === selectedSession);
+            currentFilteredScores = classData; 
+
+            document.getElementById('stat-count').innerText = classData.length + " 人";
+            if (classData.length === 0) { clearStats(); document.getElementById('stat-count').innerText = "0 人"; return; }
+
+            const totalScore = classData.reduce((acc, curr) => acc + parseInt(curr.score || 0), 0);
+            document.getElementById('stat-avg').innerText = Math.round(totalScore / classData.length);
+            document.getElementById('stat-max').innerText = Math.max(...classData.map(d => parseInt(d.score || 0)));
+            const passCount = classData.filter(d => parseInt(d.score || 0) >= 60).length;
+            document.getElementById('stat-pass').innerText = Math.round((passCount / classData.length) * 100) + "%";
+
+            let qStats = Array(13).fill(0);
+            classData.forEach(student => {
+                try {
+                    let details = typeof student.details === 'string' ? JSON.parse(student.details) : student.details;
+                    if(Array.isArray(details)) details.forEach(ans => { if(ans.correct) qStats[ans.q]++; });
+                } catch(e) {}
+            });
+
+            let barsHTML = '';
+            questions.forEach((q) => {
+                const percent = Math.round((qStats[q.id] / classData.length) * 100);
+                let barColor = percent < 50 ? 'bg-red-500' : (percent < 75 ? 'bg-yellow-500' : 'bg-green-500');
+                barsHTML += `
+                <div class="flex items-center text-xs mb-2 cursor-pointer hover:bg-slate-50 p-1.5 rounded transition" onclick="showQuestionModal(${q.id})">
+                    <div class="w-6 font-bold text-slate-500">Q${q.id}</div>
+                    <div class="flex-grow bg-slate-200 rounded-full h-2.5 overflow-hidden relative">
+                        <div class="${barColor} h-2.5 rounded-full transition-all duration-1000" style="width: ${percent}%"></div>
+                    </div>
+                    <div class="w-10 text-right font-bold ml-2 text-slate-700">${percent}%</div>
+                </div>`;
+            });
+            document.getElementById('question-analysis').innerHTML = barsHTML;
+
+            classData.sort((a, b) => parseInt(a.id) - parseInt(b.id));
+            document.getElementById('student-list-body').innerHTML = classData.map((s, index) => {
+                const score = parseInt(s.score || 0);
+                let cmt = score >= 90 ? '優秀' : (score >= 60 ? '及格' : '加油');
+                let badgeColor = score >= 90 ? 'bg-green-100 text-green-700' : (score >= 60 ? 'bg-yellow-100 text-yellow-700' : 'bg-red-100 text-red-700');
+                return `
+                    <tr class="table-row">
+                        <td class="table-cell font-bold text-slate-700">${s.id}</td>
+                        <td class="table-cell">${s.name || '-'}</td>
+                        <td class="table-cell font-black text-slate-800">${score}</td>
+                        <td class="table-cell text-right">
+                            <button onclick="showStudentModal(${index})" class="text-xs font-bold text-white bg-blue-500 hover:bg-blue-600 px-3 py-1 rounded shadow transition">📄 查看</button>
+                        </td>
+                    </tr>`;
+            }).join('');
+        }
+
+        function clearStats() {
+            document.getElementById('stat-avg').innerText = "-";
+            document.getElementById('stat-max').innerText = "-";
+            document.getElementById('stat-pass').innerText = "-";
+            document.getElementById('question-analysis').innerHTML = '<p class="text-slate-400 text-center py-8 italic text-xs">請選擇場次或尚無資料</p>';
+            document.getElementById('student-list-body').innerHTML = '<tr><td colspan="4" class="p-8 text-center text-slate-400 italic">尚無資料</td></tr>';
+        }
+
+        function showQuestionModal(qId) {
+            const q = questions.find(item => item.id === qId);
+            if(!q) return;
+            let content = `
+                <div class="mb-4">
+                    <span class="category-tag mb-2 inline-block">${q.catName}</span>
+                    <span class="difficulty-badge ${q.difficulty === 'easy' ? 'diff-easy' : (q.difficulty === 'medium' ? 'diff-medium' : 'diff-hard')}">${q.label}</span>
+                </div>
+                <h4 class="text-lg font-bold mb-4 text-slate-800 leading-relaxed">${q.question}</h4>
+                ${q.svg ? `<div class="mb-6 flex justify-center bg-slate-50 p-4 rounded-xl border border-slate-100">${q.svg}</div>` : ''}
+                <div class="bg-green-50 p-3 rounded-lg border border-green-100">
+                    <p class="text-[10px] font-bold text-green-600 uppercase mb-1">正確答案</p>
+                    <div class="text-base text-green-800 font-bold">${Array.isArray(q.answer) ? q.answer.join('、') : q.answer}</div>
+                </div>
+            `;
+            document.getElementById('question-modal-content').innerHTML = content;
+            document.getElementById('question-modal').classList.remove('hidden');
+        }
+
+        function showStudentModal(index) {
+            const s = currentFilteredScores[index];
+            if(!s) return;
+            let details = [];
+            try { details = typeof s.details === 'string' ? JSON.parse(s.details) : s.details; } catch(e) {}
+
+            let rows = questions.map(q => {
+                const ansObj = details.find(d => d.q === q.id);
+                const isCorrect = ansObj ? ansObj.correct : false;
+                const userAns = (ansObj && ansObj.answer) ? ansObj.answer : '未作答'; 
+                const statusColor = isCorrect ? 'text-green-600 bg-green-50' : 'text-red-600 bg-red-50';
+                const statusIcon = isCorrect ? '✓' : '✗';
+                const correctAns = Array.isArray(q.answer) ? q.answer.join('、') : q.answer;
+                
+                return `
+                    <tr class="border-b border-slate-100 last:border-0">
+                        <td class="p-3 align-top font-bold text-slate-400 text-xs w-10">Q${q.id}</td>
+                        <td class="p-3 align-top">
+                            <div class="text-sm text-slate-800 font-medium mb-1">${q.question}</div>
+                        </td>
+                        <td class="p-3 align-top whitespace-nowrap">
+                            <div class="font-bold ${isCorrect ? 'text-green-600' : 'text-red-600'} text-sm mb-1">${statusIcon} ${userAns}</div>
+                            ${!isCorrect ? `<div class="text-xs text-slate-400">正解: ${correctAns}</div>` : ''}
+                        </td>
+                    </tr>`;
+            }).join('');
+
+            let content = `
+                <div class="flex items-center gap-4 mb-6 bg-slate-50 p-4 rounded-xl border border-slate-200">
+                    <div class="bg-white px-4 py-2 rounded-lg shadow-sm border border-slate-200">
+                        <span class="text-xs font-bold text-slate-400 uppercase block">Score</span>
+                        <span class="text-2xl font-black text-blue-600">${s.score}</span>
+                    </div>
+                    <div>
+                        <div class="text-lg font-bold text-slate-800">${s.id}號 ${s.name || ''}</div>
+                        <div class="text-xs text-slate-500">${s.sessionName}</div>
+                    </div>
+                </div>
+                <div class="overflow-y-auto max-h-[50vh] border border-slate-200 rounded-lg">
+                    <table class="w-full text-left">
+                        <thead class="bg-slate-50 text-slate-500 text-[10px] uppercase font-bold sticky top-0 border-b border-slate-200">
+                            <tr><th class="p-2">題號</th><th class="p-2">題目</th><th class="p-2">作答詳情</th></tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-100 bg-white">${rows}</tbody>
+                    </table>
+                </div>
+            `;
+            document.getElementById('student-modal-content').innerHTML = content;
+            document.getElementById('student-modal').classList.remove('hidden');
+        }
+
+        // --- Student Start Logic ---
+        function validateAndStart() {
+            const codeInput = document.getElementById('session-code-input').value.trim();
+            const sid = document.getElementById('student-id').value;
+            const sname = document.getElementById('student-name').value.trim();
+            const statusMsg = document.getElementById('code-status-msg');
+            const btn = document.getElementById('start-btn');
+
+            if (!codeInput || !sid) { 
+                statusMsg.innerHTML = '⚠️ 請輸入「場次代碼」和選擇「學號」！';
+                return; 
+            }
+            statusMsg.innerHTML = '<span class="text-blue-500 flex items-center"><span class="loader mr-2 border-t-blue-500 w-3 h-3"></span> 驗證中...</span>';
+            btn.classList.add('opacity-50', 'cursor-not-allowed');
+
+            if (!GOOGLE_SCRIPT_URL) { startQuiz("模擬場次", sid, sname); return; }
+
+            fetch(GOOGLE_SCRIPT_URL)
+            .then(r => r.json())
+            .then(data => {
+                const sessions = data.sessions || [];
+                const session = sessions.find(s => String(s.code) === String(codeInput));
+                if (session) { 
+                    statusMsg.innerText = ""; 
+                    startQuiz(session.name, sid, sname); 
+                } else { 
+                    statusMsg.innerHTML = '❌ 無效的代碼，請重新輸入。'; 
+                    btn.classList.remove('opacity-50', 'cursor-not-allowed'); 
+                }
+            })
+            .catch((e) => { 
+                statusMsg.innerText = "連線失敗，無法驗證代碼。"; 
+                btn.classList.remove('opacity-50', 'cursor-not-allowed'); 
+            });
+        }
+
+        function startQuiz(sessionName, sid, sname) {
+            studentData.sessionName = sessionName;
+            studentData.id = sid;
+            studentData.name = sname;
+            const displayName = sname ? `${sid}號 (${sname})` : `${sid}號`;
+            document.getElementById('display-student-info').innerText = `${sessionName} • ${displayName}`;
+            document.getElementById('result-student-info').innerText = `${sessionName} • ${displayName}`;
+            document.getElementById('intro-screen').classList.add('hidden');
+            document.getElementById('quiz-container').classList.remove('hidden');
+            renderQuestions();
+            showStep(0);
+        }
+
+        function renderQuestions() {
+            const container = document.getElementById('question-card-container');
+            container.innerHTML = '';
+            questions.forEach((q, index) => {
+                const diffClass = q.difficulty === 'easy' ? 'diff-easy' : (q.difficulty === 'medium' ? 'diff-medium' : 'diff-hard');
+                const isMultiSelect = q.type === 'checkbox';
+                const inputType = isMultiSelect ? 'checkbox' : 'radio';
+                let inputNote = '';
+                if (isMultiSelect && q.id !== 11) { inputNote = '<span class="text-xs text-blue-600 font-bold ml-2 bg-blue-50 px-2 py-0.5 rounded">複選</span>'; }
+                let inputHTML = '';
+                if (q.type === 'mc' || q.type === 'checkbox') {
+                    inputHTML = `<div class="space-y-3 mt-5">${q.options.map(opt => `<label class="option-label flex items-center p-3.5 border border-slate-200 rounded-xl cursor-pointer bg-white"><input type="${inputType}" name="q${q.id}" value="${opt}" class="w-4 h-4 text-blue-600 focus:ring-blue-500"><span class="ml-3 text-slate-700 select-none text-base font-medium">${opt}</span></label>`).join('')}</div>`;
+                } else if (q.type === 'fill') {
+                    inputHTML = `<div class="mt-5"><input type="number" name="q${q.id}" placeholder="請在此輸入數字" class="w-full p-3.5 border-2 border-slate-200 rounded-xl text-xl focus:ring-4 focus:ring-blue-100 focus:border-blue-500 outline-none transition text-center font-bold text-slate-800" autocomplete="off"></div>`;
+                }
+                container.innerHTML += `<div id="q-card-${index}" class="question-step hidden fade-in bg-white rounded-2xl card-shadow p-6 border border-white/60"><div class="flex items-center mb-4"><span class="bg-slate-800 text-white text-[10px] font-bold px-2 py-1 rounded mr-2">Q${index + 1}</span><span class="category-tag">${q.catName}</span><span class="difficulty-badge ${diffClass}">${q.label}</span></div><h3 class="text-xl font-bold text-slate-800 mb-4 leading-relaxed">${q.question} ${inputNote}</h3>${q.svg ? `<div class="my-6 text-center bg-slate-50 rounded-xl p-4 flex justify-center border border-slate-100">${q.svg}</div>` : ''}${inputHTML}</div>`;
+            });
+        }
+        function showStep(index) {
+            document.querySelectorAll('.question-step').forEach(c => c.classList.add('hidden'));
+            document.getElementById(`q-card-${index}`).classList.remove('hidden');
+            currentStep = index;
+            const progress = Math.round(((index + 1) / questions.length) * 100);
+            document.getElementById('progress-bar').style.width = `${progress}%`;
+            document.getElementById('progress-percent').innerText = `${progress}%`;
+            document.getElementById('progress-text').innerText = `第 ${index + 1} / ${questions.length} 題`;
+            document.getElementById('prev-btn').classList.toggle('hidden', index === 0);
+            document.getElementById('next-btn').classList.toggle('hidden', index === questions.length - 1);
+            document.getElementById('submit-btn').classList.toggle('hidden', index !== questions.length - 1);
+            window.scrollTo(0, 0);
+        }
+        function nextQuestion() { if (currentStep < questions.length - 1) showStep(currentStep + 1); }
+        function prevQuestion() { if (currentStep > 0) showStep(currentStep - 1); }
+        function submitQuiz() {
+            let score = 0;
+            let catStats = { 'concept': { correct: 0, total: 0 }, 'calc': { correct: 0, total: 0 }, 'identify': { correct: 0, total: 0 } };
+            const formData = new FormData(document.getElementById('quiz-form'));
+            let answerDetails = [];
+            let reviewHTML = '';
+
+            questions.forEach(q => {
+                let isCorrect = false; let userValDisplay = '';
+                catStats[q.category].total++;
+                if (q.type === 'checkbox') {
+                    const checked = formData.getAll(`q${q.id}`);
+                    if (checked.length === q.answer.length && checked.every(val => q.answer.includes(val))) isCorrect = true;
+                    userValDisplay = checked.length > 0 ? checked.join('、') : '未作答';
+                } else {
+                    const val = formData.get(`q${q.id}`);
+                    if (val && val.trim() === q.answer) isCorrect = true;
+                    userValDisplay = val || '未作答';
+                }
+                if (isCorrect) { score++; catStats[q.category].correct++; }
+                answerDetails.push({ q: q.id, correct: isCorrect, answer: userValDisplay });
+                
+                const color = isCorrect ? 'text-green-600' : 'text-red-600';
+                const icon = isCorrect ? '✓' : '✗';
+                const borderColor = isCorrect ? 'border-green-200 bg-green-50' : 'border-red-200 bg-red-50';
+                const correctAnswerDisplay = Array.isArray(q.answer) ? q.answer.join('、') : q.answer;
+
+                reviewHTML += `
+                    <div class="flex items-start p-4 rounded-xl border ${borderColor} mb-3">
+                        <div class="flex-shrink-0 w-6 text-xl font-bold ${color} mt-0.5 mr-3">${icon}</div>
+                        <div class="flex-grow">
+                            <p class="text-sm text-slate-700 font-bold mb-1">${q.question}</p>
+                            <div class="text-xs">
+                                <p class="mb-1"><span class="text-slate-500">您的答案：</span><span class="${color} font-bold">${userValDisplay}</span></p>
+                                ${!isCorrect ? `<p><span class="text-slate-500">正確答案：</span><span class="text-green-600 font-bold">${correctAnswerDisplay}</span></p>` : ''}
+                            </div>
+                        </div>
+                    </div>`;
+            });
+
+            const finalScore = Math.round((score / questions.length) * 100);
+            document.getElementById('quiz-container').classList.add('hidden');
+            document.getElementById('results-container').classList.remove('hidden');
+            document.getElementById('total-score').innerText = `${finalScore} / 100`;
+            
+            const conceptPct = catStats.concept.total > 0 ? Math.round(catStats.concept.correct/catStats.concept.total*100) : 0;
+            const calcPct = catStats.calc.total > 0 ? Math.round(catStats.calc.correct/catStats.calc.total*100) : 0;
+            const identifyPct = catStats.identify.total > 0 ? Math.round(catStats.identify.correct/catStats.identify.total*100) : 0;
+
+            document.getElementById('score-concept').innerText = `${conceptPct}%`;
+            document.getElementById('score-calc').innerText = `${calcPct}%`;
+            document.getElementById('score-identify').innerText = `${identifyPct}%`;
+            document.getElementById('review-list').innerHTML = reviewHTML;
+            
+            const feedbackEl = document.getElementById('feedback-message');
+            feedbackEl.innerText = finalScore === 100 ? "太棒了！完美全對！ 🏆" : (finalScore >= 60 ? "表現優異！繼續保持！ 🌟" : "別氣餒，多練習幾次就會了！ 📚");
+
+            if(GOOGLE_SCRIPT_URL) {
+                document.getElementById('upload-status').innerText = "成績上傳中...";
+                fetch(GOOGLE_SCRIPT_URL, {
+                    method: 'POST', mode: 'no-cors',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        action: 'submit_score',
+                        sessionName: studentData.sessionName,
+                        id: studentData.id,
+                        name: studentData.name,
+                        score: finalScore,
+                        concept: catStats.concept.correct,
+                        calc: catStats.calc.correct,
+                        identify: catStats.identify.correct,
+                        details: answerDetails
+                    })
+                }).then(() => {
+                     document.getElementById('upload-status').innerText = "成績上傳成功！✅";
+                     document.getElementById('upload-status').className = "text-xs mt-3 text-green-700 bg-green-100 inline-block px-3 py-1 rounded-full font-bold";
+                });
+            }
+            window.scrollTo(0, 0);
+        }
+
+        function generateMockData() {
+            allSheetData = {
+                scores: [{sessionName: "5A測驗", id: 1, name: "陳小明", score: 80, timestamp: new Date(), details: JSON.stringify([{q:1, correct:true, answer:"是"}, {q:2, correct:false, answer:"選錯了"}])}],
+                sessions: [{name: "5A測驗", code: "123456", timestamp: new Date()}]
+            };
+        }
+    </script>
+</body>
+</html>
