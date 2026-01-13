@@ -18,7 +18,7 @@
         #artCanvas {
             background-color: white;
             box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-            /* 移除 transition 以避免拖曳時的延遲感 */
+            transition: width 0.3s, height 0.3s; 
         }
         
         .control-panel {
@@ -105,7 +105,7 @@
                     <svg class="w-8 h-8 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 4a2 2 0 114 0v1a1 1 0 001 1h3a1 1 0 011 1v3a1 1 0 01-1 1h-1a2 2 0 10-4 0v1a1 1 0 01-1 1H7a1 1 0 01-1-1v-3a1 1 0 00-1-1H4a1 1 0 01-1-1V7a1 1 0 011-1h3a1 1 0 001-1V4z"></path></svg>
                     <span class="hidden md:inline">圓的學習工具</span>
                 </h1>
-                <span class="text-[10px] text-gray-400 font-medium translate-y-1">© GRANDMONT AI</span>
+                <span class="text-[10px] text-gray-400 font-medium translate-y-1">© GRANDMONT IT</span>
             </div>
             
             <div class="flex h-full space-x-2">
@@ -124,13 +124,9 @@
         <div class="absolute top-2 left-1/2 -translate-x-1/2 text-sm text-gray-500 bg-white/80 px-3 py-1 rounded-full backdrop-blur-sm pointer-events-none z-10 whitespace-nowrap">
             拖曳 <span class="text-indigo-600 font-bold">藍點</span> 改變大小，拖曳其他色點移動位置
         </div>
-        <!-- 容器設定為 overflow-auto 以支援捲動 -->
         <div class="flex-grow relative flex justify-center items-center bg-gray-100 overflow-auto" id="geo-canvas-container">
             <canvas id="geometryCanvas" class="shadow-inner"></canvas>
             
-            <!-- 控制面板固定在容器的右下角 (如果容器捲動，它會跟著跑，這裡使用 sticky 或 fixed 更好，但 absolute 在 relative container 內會隨內容捲動。
-                 為了讓控制面板始終可見，我們將其移出 scrolling container 或設為 fixed。
-                 此處改為 fixed 以確保始終懸浮在視窗上 -->
             <div class="fixed bottom-6 right-6 md:right-auto md:left-6 bg-white/95 p-5 rounded-xl shadow-xl border border-gray-200 control-panel w-64 max-h-[85vh] overflow-y-auto z-50">
                 <h2 class="text-base font-bold text-gray-700 mb-3 border-b pb-2">顯示設定</h2>
                 
@@ -230,6 +226,10 @@
                     <div class="w-6 h-6 rounded-full border-2 border-current mb-1"></div>
                     <span class="text-[10px]">圓形</span>
                 </button>
+                <button id="addPointBtn" class="flex flex-col items-center justify-center p-2 rounded hover:bg-indigo-50 text-indigo-600 border border-gray-200 hover:border-indigo-200 transition" title="新增點">
+                    <div class="w-2 h-2 rounded-full bg-current mb-1 mt-2"></div>
+                    <span class="text-[10px] mt-1">點</span>
+                </button>
                 <button id="addLineBtn" class="flex flex-col items-center justify-center p-2 rounded hover:bg-indigo-50 text-indigo-600 border border-gray-200 hover:border-indigo-200 transition" title="新增直線">
                     <div class="w-6 h-0.5 bg-current transform -rotate-45 mb-1"></div>
                     <span class="text-[10px]">直線</span>
@@ -238,9 +238,9 @@
                     <span class="mb-1">T</span>
                     <span class="text-[10px] font-sans font-normal">文字</span>
                 </button>
-                <button id="exportBtn" class="flex flex-col items-center justify-center p-2 rounded hover:bg-indigo-50 text-indigo-600 border border-gray-200 hover:border-indigo-200 transition" title="匯出圖片 (16:9)">
-                     <svg class="w-6 h-6 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
-                     <span class="text-[10px]">匯出</span>
+                <button id="exportBtn" class="col-span-2 flex items-center justify-center p-2 rounded hover:bg-indigo-50 text-indigo-600 border border-gray-200 hover:border-indigo-200 transition" title="匯出圖片 (16:9)">
+                     <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                     <span class="text-[10px]">匯出圖片</span>
                 </button>
             </div>
 
@@ -265,7 +265,7 @@
                 <!-- 粗細調整 -->
                 <div class="flex flex-col gap-1">
                     <div class="flex justify-between items-center">
-                        <label class="text-xs font-bold text-gray-600">粗細</label>
+                        <label class="text-xs font-bold text-gray-600">粗細/大小</label>
                         <span id="strokeWidthVal" class="text-[10px] text-gray-500">2px</span>
                     </div>
                     <input type="range" id="strokeWidthSlider" min="1" max="20" value="2" class="w-full h-1">
@@ -273,7 +273,7 @@
                 
                 <div class="flex flex-col gap-1">
                     <div class="flex items-center justify-between">
-                        <label class="text-xs font-bold text-gray-600">填滿</label>
+                        <label class="text-xs font-bold text-gray-600">填滿設定</label>
                         <input type="color" id="fillColorPicker" value="#3b82f6" class="w-6 h-6 rounded cursor-pointer border-none bg-transparent" disabled>
                     </div>
                     <div class="flex items-center gap-2">
@@ -281,8 +281,8 @@
                         <input type="range" id="opacitySlider" min="0.1" max="1" step="0.1" value="0.5" class="w-full h-1" disabled>
                     </div>
                     <label class="flex items-center text-xs text-gray-600 cursor-pointer mt-1">
-                        <input type="checkbox" id="noFillCheck" class="mr-2" checked>
-                        無填滿
+                        <input type="checkbox" id="fillCheck" class="mr-2">
+                        填滿
                     </label>
                 </div>
             </div>
@@ -343,13 +343,6 @@
         <div class="flex-grow relative flex justify-center items-center bg-gray-200 overflow-auto" id="art-canvas-container">
             <!-- Canvas 使用 flex 的 margin: auto 來保持置中 -->
             <canvas id="artCanvas" class="m-auto"></canvas>
-            
-            <!-- 提示文字 (fixed 在角落，不隨畫布捲動) -->
-            <div class="fixed top-20 left-56 text-xs text-gray-400 pointer-events-none space-y-1 bg-white/50 p-2 rounded z-10">
-                 <p>選取文字後按 <b>Enter</b> 編輯</p>
-                 <p>雙擊文字也可編輯</p>
-                 <p>方向鍵移動 · Shift+方向鍵加速</p>
-            </div>
         </div>
     </div>
 
@@ -679,6 +672,28 @@
             resize(handle, x, y, snap) {}
         }
 
+        class ArtPoint extends ArtObject {
+            constructor(x, y) {
+                super(x, y);
+                this.type = 'point';
+                this.lineWidth = 5; // Radius
+            }
+            draw(ctx, isSelected) {
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.lineWidth, 0, Math.PI * 2);
+                ctx.fillStyle = this.color;
+                ctx.fill();
+                if (isSelected) {
+                    ctx.strokeStyle = '#4F46E5';
+                    ctx.lineWidth = 1;
+                    ctx.stroke();
+                }
+            }
+            contains(x, y) {
+                return Math.hypot(x - this.x, y - this.y) <= Math.max(this.lineWidth, 5) + 5;
+            }
+        }
+
         class ArtCircle extends ArtObject {
             constructor(x, y, r) {
                 super(x, y);
@@ -737,7 +752,7 @@
                 if(isSelected) { this.drawHandle(ctx, this.x, this.y); this.drawHandle(ctx, this.x2, this.y2); }
             }
             drawHandle(ctx, x, y) {
-                ctx.beginPath(); ctx.arc(x, y, 5, 0, Math.PI*2); ctx.fillStyle = '#fff'; ctx.fill(); ctx.strokeStyle = '#4F46E5'; ctx.lineWidth = 2; ctx.stroke();
+                ctx.beginPath(); ctx.arc(x, y, 5, 0, Math.PI*2); ctx.fillStyle = '#fff'; ctx.fill(); ctx.strokeStyle = '#4F46E5'; ctx.stroke();
             }
             contains(x, y) {
                 const d = Math.abs((this.y2-this.y)*x - (this.x2-this.x)*y + this.x2*this.y - this.y2*this.x) / Math.hypot(this.y2-this.y, this.x2-this.x);
@@ -804,6 +819,7 @@
             window.addEventListener('keydown', handleArtKey);
 
             document.getElementById('addCircleBtn').addEventListener('click', () => addArtObject('circle'));
+            document.getElementById('addPointBtn').addEventListener('click', () => addArtObject('point'));
             document.getElementById('addLineBtn').addEventListener('click', () => addArtObject('line'));
             document.getElementById('addTextBtn').addEventListener('click', () => addArtObject('text'));
             document.getElementById('deleteBtn').addEventListener('click', deleteSelected);
@@ -850,7 +866,7 @@
             const strokePicker = document.getElementById('strokeColorPicker');
             const fillPicker = document.getElementById('fillColorPicker');
             const opacitySlider = document.getElementById('opacitySlider');
-            const noFillCheck = document.getElementById('noFillCheck');
+            const fillCheck = document.getElementById('fillCheck');
             const showBgGrid = document.getElementById('showBgGrid');
             const showArtCenterCheck = document.getElementById('showArtCenter');
             const gridSizeInput = document.getElementById('gridSizeInput');
@@ -861,10 +877,11 @@
             strokePicker.addEventListener('input', (e) => updateStyle('color', e.target.value));
             fillPicker.addEventListener('input', (e) => updateStyle('fillColor', e.target.value));
             opacitySlider.addEventListener('input', (e) => updateStyle('fillOpacity', e.target.value));
-            noFillCheck.addEventListener('change', (e) => {
-                fillPicker.disabled = e.target.checked;
-                opacitySlider.disabled = e.target.checked;
-                updateStyle('fillColor', e.target.checked ? 'transparent' : fillPicker.value);
+            fillCheck.addEventListener('change', (e) => {
+                const isFill = e.target.checked;
+                fillPicker.disabled = !isFill;
+                opacitySlider.disabled = !isFill;
+                updateStyle('fillColor', isFill ? fillPicker.value : 'transparent');
             });
             showBgGrid.addEventListener('change', (e) => { showArtBgGrid = e.target.checked; drawArt(); });
             showArtCenterCheck.addEventListener('change', (e) => { showArtCenter = e.target.checked; drawArt(); });
@@ -927,6 +944,8 @@
             
             if(type === 'circle') {
                 artObjects.push(new ArtCircle(cx, cy, artGridSize*2));
+            } else if (type === 'point') {
+                artObjects.push(new ArtPoint(cx, cy));
             } else if (type === 'line') {
                 artObjects.push(new ArtLine(cx - artGridSize*2, cy, cx + artGridSize*2, cy));
             } else if (type === 'text') {
@@ -944,13 +963,25 @@
                 document.getElementById('strokeWidthVal').textContent = (o.lineWidth || 2) + 'px';
                 
                 const fillP = document.getElementById('fillColorPicker');
-                const noF = document.getElementById('noFillCheck');
+                const fillCheck = document.getElementById('fillCheck');
                 const op = document.getElementById('opacitySlider');
+                
                 if(o.type === 'circle') {
-                    if(o.fillColor === 'transparent') { noF.checked = true; fillP.disabled = true; op.disabled = true; }
-                    else { noF.checked = false; fillP.disabled = false; op.disabled = false; fillP.value = o.fillColor; op.value = o.fillOpacity; }
+                    if(o.fillColor === 'transparent') { 
+                        fillCheck.checked = false; 
+                        fillP.disabled = true; 
+                        op.disabled = true; 
+                    } else { 
+                        fillCheck.checked = true; 
+                        fillP.disabled = false; 
+                        op.disabled = false; 
+                        fillP.value = o.fillColor; 
+                        op.value = o.fillOpacity; 
+                    }
                 } else {
-                    noF.checked = true; fillP.disabled = true; op.disabled = true;
+                    fillCheck.checked = false; 
+                    fillP.disabled = true; 
+                    op.disabled = true;
                 }
             }
             drawArt();
@@ -962,7 +993,7 @@
             if(prop === 'color') o.color = val;
             if(prop === 'fillColor' && o.type === 'circle') o.fillColor = val;
             if(prop === 'fillOpacity' && o.type === 'circle') o.fillOpacity = parseFloat(val);
-            if(prop === 'lineWidth' && (o.type === 'circle' || o.type === 'line')) o.lineWidth = parseInt(val);
+            if(prop === 'lineWidth' && (o.type === 'circle' || o.type === 'line' || o.type === 'point')) o.lineWidth = parseInt(val);
             drawArt();
         }
 
@@ -973,6 +1004,7 @@
                 const o = artObjects[selectedObjIdx];
                 let clone;
                 if(o.type === 'circle') { clone = new ArtCircle(0, 0, o.r); clone.fillColor = o.fillColor; clone.fillOpacity = o.fillOpacity; clone.lineWidth = o.lineWidth; }
+                else if (o.type === 'point') { clone = new ArtPoint(0, 0); clone.lineWidth = o.lineWidth; }
                 else if(o.type === 'line') { clone = new ArtLine(0, 0, o.x2-o.x, o.y2-o.y); clone.lineWidth = o.lineWidth; }
                 else { clone = new ArtText(0, 0, o.text); clone.fontSize = o.fontSize; }
                 clone.color = o.color;
@@ -988,6 +1020,7 @@
             const off = Math.random()*20 - 10;
             let newO;
             if(artClipboard.type === 'circle') { newO = new ArtCircle(cx+off, cy+off, artClipboard.r); newO.fillColor = artClipboard.fillColor; newO.fillOpacity = artClipboard.fillOpacity; newO.lineWidth = artClipboard.lineWidth; }
+            else if (artClipboard.type === 'point') { newO = new ArtPoint(cx+off, cy+off); newO.lineWidth = artClipboard.lineWidth; }
             else if(artClipboard.type === 'line') { newO = new ArtLine(cx+off, cy+off, cx+off+artClipboard.x2, cy+off+artClipboard.y2); newO.lineWidth = artClipboard.lineWidth; }
             else { newO = new ArtText(cx+off, cy+off, artClipboard.text); newO.fontSize = artClipboard.fontSize; }
             newO.color = artClipboard.color;
@@ -1015,15 +1048,15 @@
             const o = hasSel ? artObjects[selectedObjIdx] : null;
             document.getElementById('strokeColorPicker').disabled = !hasSel;
             
-            // Stroke width only for shapes
-            const isShape = hasSel && (o.type === 'circle' || o.type === 'line');
+            // Stroke width also for points
+            const isShape = hasSel && (o.type === 'circle' || o.type === 'line' || o.type === 'point');
             document.getElementById('strokeWidthSlider').disabled = !isShape;
             
-            const fillControls = ['fillColorPicker', 'opacitySlider', 'noFillCheck'];
+            const fillControls = ['fillColorPicker', 'opacitySlider', 'fillCheck'];
             const disableFill = !hasSel || (o && o.type !== 'circle');
             fillControls.forEach(id => {
                 const el = document.getElementById(id);
-                if(id === 'noFillCheck') el.disabled = disableFill;
+                if(id === 'fillCheck') el.disabled = disableFill;
                 else el.disabled = disableFill || (o && o.fillColor === 'transparent');
             });
         }
