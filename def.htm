@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>圓的幾何性質</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* 自定義過渡效果 */
+        .fade-enter {
+            opacity: 0;
+            transform: translateY(-10px);
+            transition: opacity 0.3s ease-out, transform 0.3s ease-out;
+        }
+        .fade-enter-active {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        
+        /* SVG 線條動畫 */
+        .svg-elem {
+            transition: all 0.4s ease;
+            opacity: 0.3;
+        }
+        .svg-elem.active {
+            opacity: 1;
+            stroke-width: 6; /* 加粗線條以配合放大的尺寸 */
+            filter: drop-shadow(0px 0px 6px rgba(0,0,0,0.3));
+        }
+        /* 圓心的特別樣式 */
+        #visual-center.active {
+            r: 8; /* 放大圓心 */
+        }
+        
+        /* 為了大字體優化行高 */
+        p, h1, h2, span {
+            line-height: 1.6;
+        }
+    </style>
+</head>
+<body class="bg-slate-50 min-h-screen font-sans text-slate-800 flex items-center justify-center p-4 lg:p-8">
+
+    <!-- 加大容器 max-w-7xl -->
+    <div class="max-w-7xl w-full bg-white rounded-3xl shadow-2xl overflow-hidden flex flex-col lg:flex-row min-h-[80vh]">
+        
+        <!-- 左側：視覺展示區 (加大寬度佔比) -->
+        <div class="bg-slate-100 p-8 lg:p-12 flex flex-col items-center justify-center lg:w-5/12 border-b lg:border-b-0 lg:border-r border-slate-200">
+            <h2 class="text-3xl lg:text-4xl font-bold text-slate-600 mb-8 tracking-wide">圓形圖示</h2>
+            
+            <!-- 大幅加大 SVG 容器 -->
+            <div class="relative w-80 h-80 lg:w-[450px] lg:h-[450px]">
+                <!-- 調整 viewBox 範圍以避免邊緣裁切或重疊 -->
+                <svg viewBox="0 0 200 220" class="w-full h-full transform hover:scale-105 transition-transform duration-500">
+                    <!-- 基礎背景圓 (稍微縮小半徑 r=80 以留出更多空間給周圍與下方文字) -->
+                    <circle cx="100" cy="100" r="80" fill="none" stroke="#cbd5e1" stroke-width="2" />
+
+                    <!-- 圓周 (Circumference) - 改為實線 (移除 stroke-dasharray) -->
+                    <circle id="visual-circumference" class="svg-elem" cx="100" cy="100" r="80" fill="none" stroke="#3b82f6" stroke-width="4" />
+                    
+                    <!-- 直徑 (Diameter) - 改為紅色 (#ef4444) -->
+                    <!-- 從 (20, 100) 到 (180, 100) -->
+                    <line id="visual-diameter" class="svg-elem" x1="20" y1="100" x2="180" y2="100" stroke="#ef4444" stroke-width="4" />
+                    
+                    <!-- 半徑 (Radius) - 改為綠色 (#22c55e) -->
+                    <!-- r=80, 角度45度. x = 100 + 80*cos(45) = 156.5, y = 100 - 80*sin(45) = 43.5 -->
+                    <line id="visual-radius" class="svg-elem" x1="100" y1="100" x2="156.5" y2="43.5" stroke="#22c55e" stroke-width="4" />
+                    
+                    <!-- 圓心 (Center) - 改為黑色 (#000000) -->
+                    <circle id="visual-center" class="svg-elem" cx="100" cy="100" r="6" fill="#000000" />
+                    
+                    <!-- 標籤 (下移 y 座標至 210，避免與圓形重疊) -->
+                    <text x="100" y="210" text-anchor="middle" font-size="14" fill="#64748b" id="caption-text" class="font-bold opacity-0 transition-opacity duration-300 tracking-wider">請點擊右側項目</text>
+                </svg>
+            </div>
+            <p class="mt-8 text-xl lg:text-2xl text-slate-400 text-center font-medium">點擊右側定義以查看圖示位置</p>
+        </div>
+
+        <!-- 右側：定義互動區 -->
+        <div class="p-8 lg:p-16 lg:w-7/12 bg-white flex flex-col justify-center">
+            <h1 class="text-4xl lg:text-5xl font-extrabold text-slate-800 mb-4">圓的定義</h1>
+            <p class="text-slate-500 text-xl lg:text-2xl mb-10">點擊下列項目以揭示定義</p>
+
+            <div class="space-y-6">
+                
+                <!-- 項目 1: 圓周 (保持藍色) -->
+                <div class="group">
+                    <!-- 加大 Padding (p-6), 加大文字 (text-3xl) -->
+                    <button onclick="toggleDefinition('circumference')" class="w-full flex items-center justify-between p-6 bg-white border-2 border-slate-200 rounded-2xl shadow-sm hover:shadow-lg hover:border-blue-300 transition-all focus:outline-none focus:ring-4 focus:ring-blue-500 focus:ring-opacity-30">
+                        <div class="flex items-center gap-5">
+                            <div class="w-5 h-5 rounded-full bg-blue-500 shadow-md"></div>
+                            <span class="font-bold text-2xl lg:text-3xl text-slate-700">圓周</span>
+                        </div>
+                        <svg class="w-8 h-8 text-slate-400 transform transition-transform duration-300" id="icon-circumference" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M19 9l-7 7-7-7"></path></svg>
+                    </button>
+                    <!-- 加大定義區塊與文字 (text-2xl) -->
+                    <div id="def-circumference" class="hidden px-8 pb-8 pt-4 border-x-2 border-b-2 border-slate-100 rounded-b-2xl bg-blue-50">
+                        <p class="text-blue-800 text-2xl lg:text-3xl font-medium">圓的周界</p>
+                    </div>
+                </div>
+
+                <!-- 項目 2: 圓心 (改為黑色/灰色系) -->
+                <div class="group">
+                    <button onclick="toggleDefinition('center')" class="w-full flex items-center justify-between p-6 bg-white border-2 border-slate-200 rounded-2xl shadow-sm hover:shadow-lg hover:border-gray-400 transition-all focus:outline-none focus:ring-4 focus:ring-gray-800 focus:ring-opacity-30">
+                        <div class="flex items-center gap-5">
+                            <div class="w-5 h-5 rounded-full bg-black shadow-md"></div>
+                            <span class="font-bold text-2xl lg:text-3xl text-slate-700">圓心</span>
+                        </div>
+                        <svg class="w-8 h-8 text-slate-400 transform transition-transform duration-300" id="icon-center" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M19 9l-7 7-7-7"></path></svg>
+                    </button>
+                    <div id="def-center" class="hidden px-8 pb-8 pt-4 border-x-2 border-b-2 border-slate-100 rounded-b-2xl bg-gray-100">
+                        <p class="text-black text-2xl lg:text-3xl font-medium">圓的中心</p>
+                    </div>
+                </div>
+
+                <!-- 項目 3: 直徑 (改為紅色) -->
+                <div class="group">
+                    <button onclick="toggleDefinition('diameter')" class="w-full flex items-center justify-between p-6 bg-white border-2 border-slate-200 rounded-2xl shadow-sm hover:shadow-lg hover:border-red-300 transition-all focus:outline-none focus:ring-4 focus:ring-red-500 focus:ring-opacity-30">
+                        <div class="flex items-center gap-5">
+                            <div class="w-5 h-5 rounded-full bg-red-500 shadow-md"></div>
+                            <span class="font-bold text-2xl lg:text-3xl text-slate-700">直徑</span>
+                        </div>
+                        <svg class="w-8 h-8 text-slate-400 transform transition-transform duration-300" id="icon-diameter" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M19 9l-7 7-7-7"></path></svg>
+                    </button>
+                    <div id="def-diameter" class="hidden px-8 pb-8 pt-4 border-x-2 border-b-2 border-slate-100 rounded-b-2xl bg-red-50">
+                        <p class="text-red-800 text-2xl lg:text-3xl font-medium">連接圓上任何兩點且經過圓心的線段</p>
+                    </div>
+                </div>
+
+                <!-- 項目 4: 半徑 (改為綠色) -->
+                <div class="group">
+                    <button onclick="toggleDefinition('radius')" class="w-full flex items-center justify-between p-6 bg-white border-2 border-slate-200 rounded-2xl shadow-sm hover:shadow-lg hover:border-green-300 transition-all focus:outline-none focus:ring-4 focus:ring-green-500 focus:ring-opacity-30">
+                        <div class="flex items-center gap-5">
+                            <div class="w-5 h-5 rounded-full bg-green-500 shadow-md"></div>
+                            <span class="font-bold text-2xl lg:text-3xl text-slate-700">半徑</span>
+                        </div>
+                        <svg class="w-8 h-8 text-slate-400 transform transition-transform duration-300" id="icon-radius" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M19 9l-7 7-7-7"></path></svg>
+                    </button>
+                    <div id="def-radius" class="hidden px-8 pb-8 pt-4 border-x-2 border-b-2 border-slate-100 rounded-b-2xl bg-green-50">
+                        <p class="text-green-800 text-2xl lg:text-3xl font-medium">連接圓心和圓上任何一點的線段</p>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const items = ['circumference', 'center', 'diameter', 'radius'];
+        
+        function toggleDefinition(selectedId) {
+            items.forEach(id => {
+                const defEl = document.getElementById(`def-${id}`);
+                const iconEl = document.getElementById(`icon-${id}`);
+                const visualEl = document.getElementById(`visual-${id}`);
+                
+                if (id === selectedId) {
+                    const isHidden = defEl.classList.contains('hidden');
+                    
+                    if (isHidden) {
+                        // 開啟
+                        defEl.classList.remove('hidden');
+                        defEl.classList.add('fade-enter-active');
+                        iconEl.style.transform = 'rotate(180deg)';
+                        
+                        if(visualEl) visualEl.classList.add('active');
+                        
+                        updateCaption(id);
+                    } else {
+                        // 關閉 (新增功能：再次點擊時收回)
+                        defEl.classList.add('hidden');
+                        defEl.classList.remove('fade-enter-active');
+                        iconEl.style.transform = 'rotate(0deg)';
+                        
+                        if(visualEl) visualEl.classList.remove('active');
+                        
+                        // 當收回時，隱藏下方的文字提示
+                        document.getElementById('caption-text').style.opacity = '0';
+                    }
+                } else {
+                    // 關閉其他
+                    defEl.classList.add('hidden');
+                    defEl.classList.remove('fade-enter-active');
+                    iconEl.style.transform = 'rotate(0deg)';
+                    
+                    if(visualEl) visualEl.classList.remove('active');
+                }
+            });
+        }
+
+        function updateCaption(id) {
+            const caption = document.getElementById('caption-text');
+            const captions = {
+                'circumference': '藍色實線表示圓周',
+                'center': '黑色圓點表示圓心',
+                'diameter': '紅色線段表示直徑',
+                'radius': '綠色線段表示半徑'
+            };
+            
+            caption.style.opacity = '0';
+            setTimeout(() => {
+                caption.textContent = captions[id];
+                caption.style.opacity = '1';
+            }, 150);
+        }
+    </script>
+</body>
+</html>
